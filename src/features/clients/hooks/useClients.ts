@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useClientsGateway } from '@/gateways';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
-import type { Client, ClientDetail, ClientInput } from '@/types/client';
+import type { BodyMeasurement, Client, ClientDetail, ClientInput } from '@/types/client';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
@@ -122,6 +122,25 @@ export function useUnassignPlanFromClient() {
     mutationFn: (clientId: string) => gateway.unassignPlan(clientId),
     onSuccess: (_data, clientId) => {
       queryClient.invalidateQueries({ queryKey: clientKey(clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Registra un pesaje nuevo e invalida el detalle del cliente. */
+export function useAddMeasurement() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      input,
+    }: {
+      clientId: string;
+      input: Omit<BodyMeasurement, 'id'>;
+    }) => gateway.addMeasurement(clientId, input),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
       queryClient.invalidateQueries({ queryKey: clientsKey });
     },
   });

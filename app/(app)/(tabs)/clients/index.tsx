@@ -70,9 +70,7 @@ export default function ClientsScreen(): React.JSX.Element {
 
       <Fab
         accessibilityLabel="Añadir usuario"
-        onPress={() => {
-          // TODO(backend): abrir formulario de alta de cliente (Fase 5).
-        }}
+        onPress={() => router.push('/(app)/(tabs)/clients/new')}
       />
     </SafeAreaView>
   );

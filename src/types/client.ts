@@ -43,20 +43,54 @@ export interface AssignedNutritionPlan {
 }
 
 /**
- * Campos editables al crear/actualizar un cliente.
- * TODO(Fase 6): ampliar con teléfono, fecha de nacimiento, notas, etc. cuando
- * exista el editor real de clientes.
+ * Una medición corporal puntual (pesaje). El peso "vigente" del cliente
+ * (`ClientDetail.weightKg`/`weightProgress.currentKg`) siempre refleja la
+ * medición más reciente — no se edita a mano desde el formulario general.
  */
-export type ClientInput = Omit<Client, 'id'>;
+export interface BodyMeasurement {
+  id: string;
+  /** Texto en formato `dd/mm/aaaa`, igual que `DateField`. */
+  date: string;
+  weightKg: number;
+  waistCm?: number;
+  chestCm?: number;
+  hipCm?: number;
+  armCm?: number;
+}
+
+/**
+ * Campos editables al crear/actualizar un cliente. `avatarUrl` y `lastActivity`
+ * no forman parte del formulario: el Gateway los gestiona (mismo precedente que
+ * `imageUrl` en `nutrition`/`routines`). El peso "actual" tampoco se edita acá,
+ * ver `ClientsGateway.addMeasurement`.
+ */
+export interface ClientInput {
+  name: string;
+  goal: ClientGoal;
+  email?: string;
+  phone?: string;
+  /** Texto en formato `dd/mm/aaaa`. */
+  birthDate: string;
+  heightCm: number;
+  goalKg: number;
+  notes?: string;
+}
 
 /** Detalle completo de un cliente (pantalla "Perfil de Usuario"). */
 export interface ClientDetail extends Client {
   /** Mes y año de alta (ej: "Ene 2025"). */
   memberSince: string;
+  email?: string;
+  phone?: string;
+  /** Texto en formato `dd/mm/aaaa`. */
+  birthDate: string;
+  notes?: string;
   weightKg: number;
   heightCm: number;
   bmi: number;
   weightProgress: WeightProgress;
+  /** Historial de pesajes, más reciente al final. Fuente de verdad de `weightKg`. */
+  measurements: BodyMeasurement[];
   assignedRoutines: AssignedRoutine[];
   /** Plan de alimentación asignado, o `null` si no tiene ninguno. */
   assignedPlan: AssignedNutritionPlan | null;

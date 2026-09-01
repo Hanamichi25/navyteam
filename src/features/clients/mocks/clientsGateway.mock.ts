@@ -1,13 +1,25 @@
 import { delay } from '@/lib/delay';
 import { createId } from '@/lib/id';
 import { readJSON, writeJSON } from '@/lib/storage';
-import type { AssignedRoutine, Client, ClientDetail, ClientInput } from '@/types/client';
+import type {
+  AssignedRoutine,
+  BodyMeasurement,
+  Client,
+  ClientDetail,
+  ClientInput,
+} from '@/types/client';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 import type { ClientsGateway } from '../gateway';
 import { CLIENT_DETAILS_SEED } from './clients.mock';
 
 const STORAGE_KEY = '@navyteam/clients';
+
+/** Avatares de placeholder para clientes nuevos (mismo servicio que la semilla). */
+function placeholderAvatarUrl(): string {
+  const seed = Math.floor(Math.random() * 70) + 1;
+  return `https://i.pravatar.cc/150?img=${seed}`;
+}
 
 async function readAll(): Promise<ClientDetail[]> {
   return readJSON<ClientDetail[]>(STORAGE_KEY, Object.values(CLIENT_DETAILS_SEED));
@@ -24,6 +36,13 @@ function formatMemberSince(date: Date): string {
     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
   ];
   return `${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/** IMC = peso (kg) / altura (m)², redondeado a 1 decimal. */
+function computeBmi(weightKg: number, heightCm: number): number {
+  if (heightCm <= 0) return 0;
+  const heightM = heightCm / 100;
+  return Math.round((weightKg / (heightM * heightM)) * 10) / 10;
 }
 
 /**
@@ -52,15 +71,19 @@ export function createMockClientsGateway(): ClientsGateway {
     async create(input: ClientInput) {
       await delay(600);
       const all = await readAll();
-      // TODO(Fase 6): estos campos los completará el editor real de clientes.
+      // El peso "vigente" arranca en 0 hasta que se registre el primer pesaje
+      // vía addMeasurement (el editor de alta lo encadena automáticamente con
+      // el "Peso inicial" del formulario).
       const detail: ClientDetail = {
         ...input,
         id: createId('cli'),
+        avatarUrl: placeholderAvatarUrl(),
+        lastActivity: 'Sin actividad aún',
         memberSince: formatMemberSince(new Date()),
         weightKg: 0,
-        heightCm: 0,
         bmi: 0,
-        weightProgress: { startKg: 0, currentKg: 0, goalKg: 0 },
+        weightProgress: { startKg: 0, currentKg: 0, goalKg: input.goalKg },
+        measurements: [],
         assignedRoutines: [],
         assignedPlan: null,
       };
@@ -75,7 +98,19 @@ export function createMockClientsGateway(): ClientsGateway {
       if (index === -1) {
         throw new Error(`Cliente no encontrado: ${id}`);
       }
-      const updated: ClientDetail = { ...all[index]!, ...input };
+      const current = all[index]!;
+      const nextHeightCm = input.heightCm ?? current.heightCm;
+      const updated: ClientDetail = {
+        ...current,
+        ...input,
+        // La meta de peso se actualiza vía `goalKg`; el peso vigente
+        // (startKg/currentKg) solo cambia por addMeasurement.
+        weightProgress: {
+          ...current.weightProgress,
+          goalKg: input.goalKg ?? current.weightProgress.goalKg,
+        },
+        bmi: computeBmi(current.weightKg, nextHeightCm),
+      };
       const next = [...all];
       next[index] = updated;
       await writeJSON(STORAGE_KEY, next);
@@ -166,6 +201,34 @@ export function createMockClientsGateway(): ClientsGateway {
         throw new Error(`Cliente no encontrado: ${clientId}`);
       }
       const updated: ClientDetail = { ...all[index]!, assignedPlan: null };
+      const next = [...all];
+      next[index] = updated;
+      await writeJSON(STORAGE_KEY, next);
+      return updated;
+    },
+
+    async addMeasurement(clientId: string, input: Omit<BodyMeasurement, 'id'>) {
+      await delay(500);
+      const all = await readAll();
+      const index = all.findIndex((client) => client.id === clientId);
+      if (index === -1) {
+        throw new Error(`Cliente no encontrado: ${clientId}`);
+      }
+      const client = all[index]!;
+      const measurement: BodyMeasurement = { ...input, id: createId('msr') };
+      const isFirstMeasurement = client.measurements.length === 0;
+      const updated: ClientDetail = {
+        ...client,
+        measurements: [...client.measurements, measurement],
+        weightKg: measurement.weightKg,
+        bmi: computeBmi(measurement.weightKg, client.heightCm),
+        weightProgress: {
+          ...client.weightProgress,
+          // El primer pesaje registrado también fija el punto de partida.
+          startKg: isFirstMeasurement ? measurement.weightKg : client.weightProgress.startKg,
+          currentKg: measurement.weightKg,
+        },
+      };
       const next = [...all];
       next[index] = updated;
       await writeJSON(STORAGE_KEY, next);

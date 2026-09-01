@@ -1,4 +1,4 @@
-import type { Client, ClientDetail, ClientInput } from '@/types/client';
+import type { BodyMeasurement, Client, ClientDetail, ClientInput } from '@/types/client';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
@@ -25,4 +25,9 @@ export interface ClientsGateway {
    */
   assignPlan(clientId: string, plan: NutritionPlan): Promise<ClientDetail>;
   unassignPlan(clientId: string): Promise<ClientDetail>;
+  /**
+   * Registra un pesaje nuevo. Pasa a ser la medición vigente: recalcula
+   * `weightKg`, `weightProgress.currentKg` y `bmi` a partir de ella.
+   */
+  addMeasurement(clientId: string, input: Omit<BodyMeasurement, 'id'>): Promise<ClientDetail>;
 }

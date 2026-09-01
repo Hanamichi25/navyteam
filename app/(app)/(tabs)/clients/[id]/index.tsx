@@ -13,11 +13,14 @@ import {
   AssignedRoutineRow,
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
+  MeasurementHistoryList,
   useClient,
   useUnassignPlanFromClient,
   useUnassignRoutineFromClient,
+  WeightEvolutionChart,
   WeightProgressCard,
 } from '@/features/clients';
+import { computeAge } from '@/lib/date';
 
 type ProfileTab = 'routines' | 'nutrition' | 'messages';
 
@@ -44,9 +47,7 @@ export default function ClientProfileScreen(): React.JSX.Element {
         action={{
           iconName: 'ellipsis-horizontal',
           accessibilityLabel: 'Más opciones',
-          onPress: () => {
-            // TODO(backend): menú contextual (editar, archivar, eliminar).
-          },
+          onPress: () => router.push(`/(app)/(tabs)/clients/${id}/edit`),
         }}
       />
 
@@ -73,6 +74,9 @@ export default function ClientProfileScreen(): React.JSX.Element {
               />
               <Text className="text-xs text-ink-faint">
                 Miembro desde: {client.data.memberSince}
+                {computeAge(client.data.birthDate) !== null
+                  ? ` · ${computeAge(client.data.birthDate)} años`
+                  : ''}
               </Text>
             </View>
 
@@ -83,6 +87,26 @@ export default function ClientProfileScreen(): React.JSX.Element {
             </View>
 
             <WeightProgressCard progress={client.data.weightProgress} />
+
+            <WeightEvolutionChart measurements={client.data.measurements} />
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push(`/(app)/(tabs)/clients/${id}/add-measurement`)}
+              className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+            >
+              <Text className="text-sm font-semibold text-primary">+ Agregar medición</Text>
+            </Pressable>
+
+            <MeasurementHistoryList measurements={client.data.measurements} />
+
+            <View className="gap-1 rounded-2xl border border-line bg-surface-subtle p-4">
+              <Text className="text-sm font-bold text-ink">Adherencia</Text>
+              <Text className="text-xs text-ink-muted">
+                Se calculará automáticamente cuando exista el registro de entrenamientos
+                (Fase 7).
+              </Text>
+            </View>
 
             <View className="flex-row rounded-2xl bg-surface-field p-1">
               {TABS.map((item) => {

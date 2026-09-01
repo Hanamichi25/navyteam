@@ -163,10 +163,37 @@ pantalla a su formulario.
   `ClientDetail.assignedPlanName: string | null` (un string suelto) se subió de nivel a
   `assignedPlan: AssignedNutritionPlan | null` ({id, name, kcalPerDay}), igual que ya existía
   `AssignedRoutine` para rutinas — así se puede desasignar por id en vez de por nombre.
-- **Fase 6 — CRUD de Clientes + perfil ampliado.** Alta/edición: nombre, email, teléfono,
-  **fecha de nacimiento**, avatar, objetivo, notas. **Historial de mediciones** (`BodyMeasurement`:
-  fecha + peso, y otras medidas opcionales). Perfil ampliado: edad calculada, IMC recalculado,
-  **gráfica de evolución de peso**, adherencia.
+- ✅ **Fase 6 — CRUD de Clientes + perfil ampliado.** Formulario compartido `ClientEditorForm`
+  (`clients/new.tsx`/`[id]/edit.tsx`): nombre, objetivo, fecha de nacimiento, altura, meta de
+  peso, email/teléfono/notas (opcionales). `avatarUrl` sigue el mismo precedente que `imageUrl`
+  en `nutrition`/`routines`: lo genera el Gateway (placeholder `pravatar` aleatorio), no es un
+  campo del formulario. El botón "⋯" del perfil navega al editor; "Eliminar usuario" vive en su
+  footer con `confirm()`, igual que rutinas/planes.
+  **El peso "actual" no se edita desde el formulario general** — es siempre la medición más
+  reciente de `ClientDetail.measurements: BodyMeasurement[]` (fecha + peso + medidas opcionales:
+  cintura/pecho/cadera/brazo). Se gestiona aparte, desde el perfil ("+ Agregar medición" →
+  `clients/[id]/add-measurement.tsx`, modal) vía `ClientsGateway.addMeasurement`, que recalcula
+  `weightKg`, `weightProgress.currentKg` y **`bmi`** (el IMC nunca se teclea, siempre se deriva
+  de `heightCm` + el peso vigente — también se recalcula en `update()` si cambia la altura). El
+  form de **crear** pide además un "Peso inicial" obligatorio que siembra `weightProgress.startKg`
+  y la primera medición (encadenando `useCreateClient` + `useAddMeasurement` desde `new.tsx`); el
+  form de **editar** no lo muestra. `ClientInput` dejó de ser `Omit<Client,'id'>` y pasó a ser su
+  propia interfaz con estos campos.
+  Perfil ampliado: **edad calculada** (`src/lib/date.ts#computeAge`, junto a "Miembro desde") sin
+  tocar la fila de `MetricTile` para no repetir el bug de recorte por falta de espacio que se
+  arregló en la tab bar (ver más abajo); **`WeightEvolutionChart`** (gráfica de línea con
+  `react-native-gifted-charts`, ancho explícito vía `useWindowDimensions` en vez de
+  `adjustToWidth` — evita que la línea se desborde de la card en el primer render) y
+  **`MeasurementHistoryList`** (sin eliminar, scope acotado a propósito) debajo de
+  `WeightProgressCard`; **"Adherencia"** es una card placeholder explícita — no hay datos reales
+  de sesiones hasta la Fase 7.
+  **Caveat conocido de `react-native-gifted-charts` en web**: emite 7 warnings de consola
+  "Unknown event handler property... onStartShouldSetResponder/onResponderGrant/..." — la
+  librería asigna siempre esos props (sistema de Responder heredado de React Native clásico) al
+  `View` interno del `LineChart`, independientemente de si se usa `pointerConfig`, y
+  react-native-web no los reconoce. Es ruido de consola solo en dev, no afecta el render ni la
+  interacción — no se intentó suprimir (fragilidad de parchear una librería externa por un
+  problema puramente cosmético).
 - **Fase 7 — Registro de entrenamientos + seguimiento.** Modelo: `WorkoutSession`
   (cliente + rutina + fecha) → `ExerciseLog` por ejercicio → `SetLog` (nº serie, reps, peso, RPE
   opcional). Flujo desde el perfil del cliente, lo hace **el entrenador**: "Registrar sesión" →
@@ -253,6 +280,9 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens`)
 - `@tanstack/react-query` (cache + invalidación) · `@react-native-async-storage/async-storage`
   (persistencia de los Gateways mock)
+- `react-native-gifted-charts` + `react-native-svg` (peer obligatorio) + `expo-linear-gradient`
+  (peer que el paquete resuelve de forma no perezosa al importar, aunque no se usen gradientes —
+  ver Fase 6) — gráfica de evolución de peso del perfil de cliente.
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
 
 **Previsto para Fase 8+ (instalar cuando toque, con confirmación):**
@@ -260,8 +290,8 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - SDK del proveedor de backend elegido (`@supabase/supabase-js` u equivalente)
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
 
-**Posible en fases de CRUD (confirmar):** una librería de gráficas (evolución de peso,
-progresión de carga) — p. ej. `react-native-gifted-charts` o SVG a mano.
+**Posible en fases de CRUD (confirmar):** librería de gráficas para la progresión de carga en
+Fase 7 (mismo `react-native-gifted-charts` ya instalado, o SVG a mano).
 
 **No agregar librerías fuera de lo previsto sin explicar por qué y confirmar.**
 
@@ -282,7 +312,9 @@ app/                          # Expo Router (rutas = pantallas)
       _layout.tsx             # Tabs (Inicio, Usuarios, Rutinas, Alimentación, Perfil)
       dashboard.tsx           # tab Inicio
       clients/                # tab Usuarios → _layout.tsx (Stack) + index.tsx (lista) +
-                               #   [id]/index.tsx (perfil) + [id]/assign-routine.tsx (modal)
+                               #   new.tsx (modal) + [id]/index.tsx (perfil) +
+                               #   [id]/edit.tsx (push) + [id]/assign-routine.tsx,
+                               #   [id]/assign-plan.tsx, [id]/add-measurement.tsx (modales)
       routines/               # tab Rutinas → _layout.tsx (Stack) + index.tsx (lista) +
                                #   new.tsx (modal) + [id].tsx (editor, push normal)
       nutrition/              # tab Alimentación → _layout.tsx (Stack) + index.tsx (lista) + new.tsx (modal)
@@ -298,7 +330,7 @@ src/
   components/                 # UI compartida y agnóstica (Button, Input, TextField, SelectField,
                                # NumberField, DateField, Card, Badge, Avatar, Fab...)
   gateways/                   # GatewaysProvider — inyecta la implementación de cada Gateway
-  lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer)
+  lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer, date)
   features/
     auth/                     # login + sesión (Zustand)
     dashboard/                # tab Inicio
@@ -389,7 +421,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 3. ✅ **Fase 3** — Capa de datos: patrón Gateway, mocks persistentes (AsyncStorage), React Query, scaffolding de formularios.
 4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
 5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
-6. **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
+6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
 7. **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso.
 8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).
 9. **Fase 9** — Conectar todos los Gateways a datos reales (esquema BD, permisos, migraciones).

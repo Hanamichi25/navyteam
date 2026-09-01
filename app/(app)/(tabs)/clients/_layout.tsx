@@ -5,9 +5,12 @@ export default function ClientsLayout(): React.JSX.Element {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="[id]/index" />
+      <Stack.Screen name="[id]/edit" />
       <Stack.Screen name="[id]/assign-routine" options={{ presentation: 'modal' }} />
       <Stack.Screen name="[id]/assign-plan" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="[id]/add-measurement" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
