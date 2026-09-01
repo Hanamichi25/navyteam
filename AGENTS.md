@@ -74,7 +74,14 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
   → los formularios de alta/edición son **Fase 5**.
 - Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
 - Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
-- El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho.
+- El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho (ancho de la
+  etiqueta, sigue pendiente). **Corregido en cambio**: el recorte vertical de las
+  etiquetas de los 5 tabs (se veían cortadas a la mitad o directamente invisibles) —
+  causa: `tabBarStyle` no tenía `height` explícito, y el item de cada tab es un
+  flex-column donde el ícono tiene `flexShrink: 0`; sin margen de sobra, todo el
+  apriete lo absorbía la etiqueta hasta aplastarla a 2-3px. Fix en
+  `app/(app)/(tabs)/_layout.tsx`: `tabBarStyle.height` explícito (76 + inset inferior
+  vía `useSafeAreaInsets`) con paddings generosos.
 
 ---
 
