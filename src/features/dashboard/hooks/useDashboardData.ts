@@ -1,17 +1,14 @@
-import { useAsyncData, type AsyncState } from '@/lib/useAsyncData';
-import type { DashboardData } from '@/types/dashboard';
-import { fetchMockDashboard } from '../mocks/dashboardData.mock';
+import { useQuery } from '@tanstack/react-query';
 
-/**
- * Carga los datos del dashboard.
- *
- * TODO(backend): en la Fase 3, `fetchMockDashboard` pasa por un Gateway y la
- * carga se hace con TanStack Query.
- */
+import { useDashboardGateway } from '@/gateways';
+import { toAsyncState, type AsyncState } from '@/lib/queryState';
+import type { DashboardData } from '@/types/dashboard';
+
+/** Carga los datos del dashboard. */
 export function useDashboardData(): AsyncState<DashboardData> {
-  return useAsyncData(
-    fetchMockDashboard,
-    [],
+  const gateway = useDashboardGateway();
+  return toAsyncState(
+    useQuery({ queryKey: ['dashboard'], queryFn: gateway.get }),
     'No se pudieron cargar los datos del panel',
   );
 }

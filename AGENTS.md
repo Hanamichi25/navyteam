@@ -96,23 +96,30 @@ casi al final.
 
 ---
 
-## Objetivo de la PRÓXIMA fase (Fase 3 — Capa de datos y edición)
+## Fase 3 — Capa de datos y edición (COMPLETADA)
 
-Preparar la infraestructura común que necesitan todos los CRUD siguientes. **Sin backend real.**
+Infraestructura común para todos los CRUD siguientes. **Sin backend real.**
 
-**Alcance:**
-1. **Patrón Gateway** en cada feature de dominio (`clients`, `routines`, `nutrition`, y las nuevas):
-   `src/features/<x>/gateway.ts` con la interfaz (`list`, `get`, `create`, `update`, `remove`
-   según aplique).
-2. **Implementación mock persistente**: `src/features/<x>/mocks/<x>Gateway.mock.ts` — datos en
-   memoria respaldados en **AsyncStorage** (`npx expo install @react-native-async-storage/async-storage`).
-   Sigue simulando latencia (delay) y expone un caso de error. Seed desde los `*.mock.ts` actuales
-   si el storage está vacío.
-3. Los Gateways se inyectan desde `app/_layout.tsx` (Context por feature o uno agregado).
+**Qué se hizo:**
+1. **Patrón Gateway** en `clients`, `routines`, `nutrition` (CRUD completo) y `dashboard`
+   (solo lectura): `src/features/<x>/gateway.ts` con la interfaz.
+2. **Implementación mock persistente**: `src/features/<x>/mocks/<x>Gateway.mock.ts` sobre
+   **AsyncStorage** (`src/lib/storage.ts`: `readJSON`/`writeJSON`), sembrada desde los
+   `*.mock.ts` de datos (ahora solo exportan el array semilla, p.ej. `CLIENT_DETAILS_SEED`).
+   Simula latencia y conserva los casos de error existentes. `src/lib/id.ts` genera ids nuevos.
+3. **Inyección de Gateways**: `src/gateways/index.tsx` (`GatewaysProvider` + un hook por
+   feature, ej. `useClientsGateway`), un único contexto agregado montado en `app/_layout.tsx`.
 4. **`@tanstack/react-query`**: `QueryClientProvider` en `app/_layout.tsx`. Lecturas → `useQuery`,
-   mutaciones → `useMutation` + `invalidateQueries`. `src/lib/useAsyncData.ts` se retira poco a poco.
-5. **Scaffolding de formularios**: campos reutilizables (`TextField`, `Select`, `NumberField`,
-   `DateField`) sobre RHF + Zod, y patrón de pantalla crear/editar (ruta dedicada o modal).
+   mutaciones → `useMutation` + `invalidateQueries`. `src/lib/useAsyncData.ts` se eliminó; su tipo
+   `AsyncState<T>` vive ahora en `src/lib/queryState.ts` junto a `toAsyncState()`, un adaptador de
+   `useQuery` a esa misma forma — así las pantallas de lectura no cambiaron.
+   - `create()` en `clients`/`nutrition` rellena con placeholders los campos que aún no tiene
+     formulario propio (medidas del cliente, imagen del plan) — los editores reales de las
+     Fases 5-6 los reemplazan.
+5. **Campos reutilizables** en `src/components/`: `TextField`, `SelectField`, `NumberField`,
+   `DateField` (esta última con entrada de texto `dd/mm/aaaa`, sin date-picker nativo todavía).
+   **Ejemplo end-to-end** del patrón crear/editar: `app/(app)/(tabs)/nutrition/new.tsx`
+   ("Nuevo plan", modal sobre `nutrition/_layout.tsx`) — plantilla a copiar en las Fases 4-6.
 
 ---
 
@@ -122,11 +129,23 @@ Cada una construye sobre la capa de la Fase 3. No hay mockups de los editores �
 sistema visual actual (mismos tokens y componentes). Conectar el FAB `+` y el botón "⋯" de cada
 pantalla a su formulario.
 
-- **Fase 4 — Ejercicios + CRUD de Rutinas.** Nueva feature `exercises`: catálogo (nombre, grupo
-  muscular, equipo, descripción/media opcional) con su CRUD y filtro por grupo muscular. Editor de
-  rutina: nombre, categoría, nivel y **lista ordenada de bloques de ejercicio** (cada bloque
-  referencia un `Exercise` y define series, rango de reps, carga sugerida, descanso). Reordenar
-  bloques. Asignar / desasignar rutina a clientes.
+- ✅ **Fase 4 — Ejercicios + CRUD de Rutinas.** Nueva feature `exercises` (`src/features/exercises/`):
+  catálogo (nombre, grupo muscular, equipo, descripción opcional) con su CRUD, seed de ~10
+  ejercicios y filtro por grupo muscular (`MUSCLE_GROUP_FILTERS`); pantallas en `app/(app)/exercises/`,
+  con entrada propia en el Drawer. `Routine` se dividió en resumen/detalle igual que `Client`:
+  `RoutineDetail.blocks: RoutineBlock[]` (cada uno referencia un `Exercise` y define series, rango
+  de reps, carga sugerida, descanso), `RoutinesGateway.get(id)` nuevo. Editor compartido
+  `RoutineEditorForm` (`new.tsx`/`[id].tsx` en `app/(app)/(tabs)/routines/`): metadata + picker de
+  ejercicios en un `<Modal>` + reordenar bloques con botones ↑/↓ (sin librería de drag-and-drop).
+  Asignar/desasignar rutina a un cliente se hace desde su perfil (tab Rutinas → "+ Asignar rutina"
+  → elegir rutina + días) vía `ClientsGateway.assignRoutine`/`unassignRoutine`, que guardan un
+  snapshot denormalizado en `ClientDetail.assignedRoutines` (no sincroniza `assignedCount` del
+  catálogo — limitación conocida del mock, se resuelve con backend real en Fase 9).
+  - **Bug encontrado y corregido de paso**: `Alert.alert` de React Native es un no-op en
+    react-native-web (sin callbacks ni botones), así que ninguna confirmación —incluido el logout
+    de `AppDrawerContent`, que ya lo usaba desde la Fase 2— funcionaba en la versión web. Se
+    añadió `src/lib/confirm.ts` (usa `window.confirm` en web, `Alert.alert` en nativo) y se
+    migraron los tres usos existentes.
 - **Fase 5 — CRUD de Alimentación.** Editor de plan (nombre, categoría, kcal/día, macros que
   sumen 100, notas). Asignar / desasignar plan a clientes.
 - **Fase 6 — CRUD de Clientes + perfil ampliado.** Alta/edición: nombre, email, teléfono,
@@ -217,11 +236,9 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - NativeWind v4 + Tailwind (estilos) · `@expo/vector-icons` (iconos)
 - `@react-navigation/drawer` (menú lateral) + peers de Expo Router / NativeWind
   (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens`)
+- `@tanstack/react-query` (cache + invalidación) · `@react-native-async-storage/async-storage`
+  (persistencia de los Gateways mock)
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
-
-**Previsto para Fase 3 (aprobado, instalar cuando toque):**
-- `@tanstack/react-query` — cache + invalidación tras mutaciones
-- `@react-native-async-storage/async-storage` — persistencia de los Gateways mock
 
 **Previsto para Fase 8+ (instalar cuando toque, con confirmación):**
 - `expo-secure-store` — tokens
@@ -239,7 +256,7 @@ progresión de carga) — p. ej. `react-native-gifted-charts` o SVG a mano.
 
 ```
 app/                          # Expo Router (rutas = pantallas)
-  _layout.tsx                 # Stack raíz + providers (aquí se inyectan los Gateways en Fase 3)
+  _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider
   index.tsx                   # redirect según sesión → /(app)/(tabs)/dashboard | /(auth)/login
   (auth)/
     _layout.tsx               # si hay sesión → app
@@ -249,33 +266,41 @@ app/                          # Expo Router (rutas = pantallas)
     (tabs)/
       _layout.tsx             # Tabs (Inicio, Usuarios, Rutinas, Alimentación, Perfil)
       dashboard.tsx           # tab Inicio
-      clients/                # tab Usuarios → _layout.tsx (Stack) + index.tsx (lista) + [id].tsx (perfil)
-      routines.tsx            # tab Rutinas
-      nutrition.tsx           # tab Alimentación
+      clients/                # tab Usuarios → _layout.tsx (Stack) + index.tsx (lista) +
+                               #   [id]/index.tsx (perfil) + [id]/assign-routine.tsx (modal)
+      routines/               # tab Rutinas → _layout.tsx (Stack) + index.tsx (lista) +
+                               #   new.tsx (modal) + [id].tsx (editor, push normal)
+      nutrition/              # tab Alimentación → _layout.tsx (Stack) + index.tsx (lista) + new.tsx (modal)
       profile.tsx             # tab Perfil (entrenador, provisional)
+    exercises/                # catálogo de ejercicios (fuera de las tabs, con entrada en el Drawer)
+                               #   _layout.tsx (Stack) + index.tsx + new.tsx (modal) + [id].tsx (modal)
     messages.tsx              # placeholder (Drawer)
     stats.tsx                 # placeholder (Drawer)
     settings.tsx              # placeholder (Drawer)
     support.tsx               # placeholder (Drawer)
 
 src/
-  components/                 # UI compartida y agnóstica (Button, Input, Card, Badge, Avatar, Fab...)
-  lib/                        # helpers sin UI (delay, useAsyncData, openDrawer)
+  components/                 # UI compartida y agnóstica (Button, Input, TextField, SelectField,
+                               # NumberField, DateField, Card, Badge, Avatar, Fab...)
+  gateways/                   # GatewaysProvider — inyecta la implementación de cada Gateway
+  lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer)
   features/
     auth/                     # login + sesión (Zustand)
     dashboard/                # tab Inicio
-    clients/                  # lista de clientes + perfil de cliente
-    routines/                 # catálogo de rutinas
+    clients/                  # lista de clientes + perfil de cliente + asignación de rutinas
+    routines/                 # catálogo de rutinas + editor con bloques de ejercicio
     nutrition/                # catálogo de planes de alimentación
+    exercises/                # catálogo de ejercicios (usado por el editor de rutinas)
     <feature>/
       index.ts                # API pública del módulo (ÚNICA puerta de entrada)
-      gateway.ts              # interfaz(es) de infra que el módulo necesita (desde Fase 3)
+      gateway.ts               # interfaz(es) de infra que el módulo necesita
       components/
       hooks/
       labels.ts               # mapeo enum → etiqueta/tono de UI
       store/
-      mocks/                  # *.mock.ts — datos fake (+ implementación mock del gateway en Fase 3)
-  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition)
+      mocks/                  # *.mock.ts (datos semilla) + <x>Gateway.mock.ts (implementación
+                               # mock persistida en AsyncStorage)
+  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition, exercise)
 ```
 
 ---
@@ -346,8 +371,8 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
 2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
-3. ⏳ **Fase 3** — Capa de datos: patrón Gateway, mocks persistentes (AsyncStorage), React Query, scaffolding de formularios.
-4. **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
+3. ✅ **Fase 3** — Capa de datos: patrón Gateway, mocks persistentes (AsyncStorage), React Query, scaffolding de formularios.
+4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
 5. **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
 7. **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso.

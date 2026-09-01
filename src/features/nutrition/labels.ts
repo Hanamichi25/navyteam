@@ -23,3 +23,10 @@ export const NUTRITION_CATEGORY_FILTERS: readonly ChipOption<NutritionCategoryFi
   { value: 'volume', label: 'Volumen' },
   { value: 'maintenance', label: 'Mantenimiento' },
 ];
+
+/** Opciones de categoría para formularios (sin el filtro "Todos"). */
+export const NUTRITION_CATEGORY_OPTIONS: readonly ChipOption<NutritionCategory>[] = [
+  { value: 'weight_loss', label: 'Pérdida de peso' },
+  { value: 'volume', label: 'Volumen' },
+  { value: 'maintenance', label: 'Mantenimiento' },
+];

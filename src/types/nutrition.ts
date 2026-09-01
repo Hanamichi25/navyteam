@@ -27,3 +27,9 @@ export interface NutritionPlan {
   /** Imagen de portada (URL remota en esta fase). */
   imageUrl: string;
 }
+
+/**
+ * Campos editables al crear/actualizar un plan de alimentación.
+ * TODO(Fase 5): añadir el campo de notas de texto libre del editor real.
+ */
+export type NutritionPlanInput = Omit<NutritionPlan, 'id' | 'assignedCount' | 'imageUrl'>;

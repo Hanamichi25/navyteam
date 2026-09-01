@@ -4,9 +4,10 @@ import {
   type DrawerContentComponentProps,
 } from 'expo-router/drawer';
 import { useRouter, usePathname } from 'expo-router';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/features/auth';
+import { confirm } from '@/lib/confirm';
 import { Avatar } from './Avatar';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -25,6 +26,7 @@ const PRIMARY_LINKS: readonly DrawerLink[] = [
   { label: 'Inicio', icon: 'home-outline', href: '/(app)/(tabs)/dashboard', match: ['/dashboard'] },
   { label: 'Mis Usuarios', icon: 'people-outline', href: '/(app)/(tabs)/clients', match: ['/clients'] },
   { label: 'Rutinas', icon: 'barbell-outline', href: '/(app)/(tabs)/routines', match: ['/routines'] },
+  { label: 'Ejercicios', icon: 'fitness-outline', href: '/(app)/exercises', match: ['/exercises'] },
   { label: 'Alimentación', icon: 'nutrition-outline', href: '/(app)/(tabs)/nutrition', match: ['/nutrition'] },
   { label: 'Mensajes', icon: 'chatbubble-outline', href: '/(app)/messages', match: ['/messages'], badge: 2 },
   { label: 'Estadísticas', icon: 'stats-chart-outline', href: '/(app)/stats', match: ['/stats'] },
@@ -82,17 +84,18 @@ export function AppDrawerContent(
 
   const confirmLogout = (): void => {
     props.navigation.closeDrawer();
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres salir de tu cuenta?', [
-      { text: 'Cancelar', style: 'cancel' },
+    confirm(
       {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
+        title: 'Cerrar sesión',
+        message: '¿Seguro que quieres salir de tu cuenta?',
+        confirmLabel: 'Cerrar sesión',
+        destructive: true,
       },
-    ]);
+      async () => {
+        await logout();
+        router.replace('/(auth)/login');
+      },
+    );
   };
 
   return (

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import {
 } from '@/features/routines';
 
 export default function RoutinesScreen(): React.JSX.Element {
+  const router = useRouter();
   const routines = useRoutines();
   const [category, setCategory] = useState<RoutineCategoryFilter>('all');
 
@@ -59,15 +61,18 @@ export default function RoutinesScreen(): React.JSX.Element {
           keyExtractor={(routine) => routine.id}
           contentContainerClassName="px-5 pb-24 gap-4"
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <RoutineCard routine={item} />}
+          renderItem={({ item }) => (
+            <RoutineCard
+              routine={item}
+              onPress={() => router.push(`/(app)/(tabs)/routines/${item.id}`)}
+            />
+          )}
         />
       )}
 
       <Fab
         accessibilityLabel="Crear rutina"
-        onPress={() => {
-          // TODO(backend): abrir editor de rutinas (Fase 5).
-        }}
+        onPress={() => router.push('/(app)/(tabs)/routines/new')}
       />
     </SafeAreaView>
   );

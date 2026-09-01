@@ -1,15 +1,11 @@
-import { delay } from '@/lib/delay';
 import type { DashboardData } from '@/types/dashboard';
 
 /**
- * Datos simulados del dashboard del entrenador.
+ * Datos semilla del dashboard, usados por `dashboardGateway.mock.ts`.
  *
  * TODO(backend): reemplazar por `GET /dashboard` (o la query equivalente de Supabase).
  */
-
-const DASHBOARD_DELAY_MS = 600;
-
-const DASHBOARD_DATA: DashboardData = {
+export const DASHBOARD_DATA_SEED: DashboardData = {
   stats: [
     { id: 'stat_active_users', value: 12, label: 'Usuarios activos' },
     { id: 'stat_routines', value: 8, label: 'Rutinas creadas' },
@@ -57,10 +53,3 @@ const DASHBOARD_DATA: DashboardData = {
     },
   ],
 };
-
-/** Devuelve el dashboard del entrenador autenticado. */
-export async function fetchMockDashboard(): Promise<DashboardData> {
-  // TODO(backend): sustituir por la llamada real, filtrando por el id del coach.
-  await delay(DASHBOARD_DELAY_MS);
-  return DASHBOARD_DATA;
-}

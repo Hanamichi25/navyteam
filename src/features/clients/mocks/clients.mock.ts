@@ -1,10 +1,10 @@
-import { delay } from '@/lib/delay';
 import type { Client, ClientDetail } from '@/types/client';
 
 /**
- * Clientes simulados del entrenador.
+ * Datos semilla de clientes, usados por `clientsGateway.mock.ts` para
+ * sembrar AsyncStorage la primera vez que se lee.
  *
- * TODO(backend): reemplazar por `GET /clients` y `GET /clients/:id`.
+ * TODO(backend): estos datos desaparecen al conectar el backend real (Fase 9).
  */
 
 const CLIENTS: readonly Client[] = [
@@ -45,7 +45,7 @@ const CLIENTS: readonly Client[] = [
   },
 ];
 
-const CLIENT_DETAILS: Record<string, ClientDetail> = {
+export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
   cli_maria: {
     ...CLIENTS[0]!,
     memberSince: 'Ene 2025',
@@ -110,19 +110,3 @@ const CLIENT_DETAILS: Record<string, ClientDetail> = {
     assignedPlanName: 'Plan Déficit Calórico',
   },
 };
-
-export async function fetchMockClients(): Promise<Client[]> {
-  // TODO(backend): sustituir por la llamada real.
-  await delay(600);
-  return [...CLIENTS];
-}
-
-export async function fetchMockClient(id: string): Promise<ClientDetail> {
-  // TODO(backend): sustituir por `GET /clients/:id`.
-  await delay(500);
-  const detail = CLIENT_DETAILS[id];
-  if (!detail) {
-    throw new Error(`Cliente no encontrado: ${id}`);
-  }
-  return detail;
-}

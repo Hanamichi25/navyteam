@@ -1,17 +1,100 @@
-import { useAsyncData, type AsyncState } from '@/lib/useAsyncData';
-import type { Client, ClientDetail } from '@/types/client';
-import { fetchMockClient, fetchMockClients } from '../mocks/clients.mock';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { useClientsGateway } from '@/gateways';
+import { toAsyncState, type AsyncState } from '@/lib/queryState';
+import type { Client, ClientDetail, ClientInput } from '@/types/client';
+import type { Routine } from '@/types/routine';
+
+const clientsKey = ['clients'] as const;
+const clientKey = (id: string) => ['clients', id] as const;
 
 /** Carga la lista de clientes del entrenador. */
 export function useClients(): AsyncState<Client[]> {
-  return useAsyncData(fetchMockClients, [], 'No se pudieron cargar los usuarios');
+  const gateway = useClientsGateway();
+  return toAsyncState(
+    useQuery({ queryKey: clientsKey, queryFn: gateway.list }),
+    'No se pudieron cargar los usuarios',
+  );
 }
 
 /** Carga el detalle de un cliente por id. */
 export function useClient(id: string): AsyncState<ClientDetail> {
-  return useAsyncData(
-    () => fetchMockClient(id),
-    [id],
+  const gateway = useClientsGateway();
+  return toAsyncState(
+    useQuery({ queryKey: clientKey(id), queryFn: () => gateway.get(id) }),
     'No se pudo cargar el perfil del usuario',
   );
+}
+
+/** Crea un cliente nuevo e invalida la lista. */
+export function useCreateClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ClientInput) => gateway.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Actualiza un cliente e invalida su detalle y la lista. */
+export function useUpdateClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<ClientInput> }) =>
+      gateway.update(id, input),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.id) });
+    },
+  });
+}
+
+/** Elimina un cliente e invalida la lista. */
+export function useRemoveClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gateway.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Asigna una rutina a un cliente e invalida su detalle. */
+export function useAssignRoutineToClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      routine,
+      schedule,
+    }: {
+      clientId: string;
+      routine: Routine;
+      schedule: string;
+    }) => gateway.assignRoutine(clientId, routine, schedule),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Desasigna una rutina de un cliente e invalida su detalle. */
+export function useUnassignRoutineFromClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, routineId }: { clientId: string; routineId: string }) =>
+      gateway.unassignRoutine(clientId, routineId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
 }

@@ -22,3 +22,17 @@ export const ROUTINE_CATEGORY_FILTERS: readonly ChipOption<RoutineCategoryFilter
   { value: 'cardio', label: 'Cardio' },
   { value: 'flexibility', label: 'Flexibilidad' },
 ];
+
+/** Opciones de categoría para formularios (sin el filtro "Todas"). */
+export const ROUTINE_CATEGORY_OPTIONS: readonly ChipOption<RoutineCategory>[] = [
+  { value: 'strength', label: 'Fuerza' },
+  { value: 'cardio', label: 'Cardio' },
+  { value: 'flexibility', label: 'Flexibilidad' },
+];
+
+/** Opciones de nivel para formularios. */
+export const ROUTINE_LEVEL_OPTIONS: readonly ChipOption<RoutineLevel>[] = [
+  { value: 'beginner', label: 'Principiante' },
+  { value: 'intermediate', label: 'Intermedio' },
+  { value: 'advanced', label: 'Avanzado' },
+];

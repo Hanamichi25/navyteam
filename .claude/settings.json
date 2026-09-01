@@ -1,4 +1,21 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const m=require\\('./node_modules/expo/bundledNativeModules.json'\\); console.log\\(m['@react-native-async-storage/async-storage']\\)\")",
+      "Bash(timeout 60 bash -c 'until curl -sf http://localhost:8081 >/dev/null 2>&1; do sleep 1; done')",
+      "Bash(chromium-cli --help)",
+      "Bash(node -e \"require\\('playwright'\\); console.log\\('playwright ok'\\)\")",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright install chromium --with-deps)",
+      "Bash(mkdir -p 'C:\\\\Users\\\\PC\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-PC-Documents-Projects-AdminApp-navyteam\\\\cb06dd35-9655-4eff-888b-3a2bd7932797\\\\scratchpad')",
+      "Bash(npm init *)",
+      "Bash(node drive.js)",
+      "Bash(timeout 40 bash -c 'until curl -sf http://localhost:8081 >/dev/null 2>&1; do sleep 1; done')",
+      "Bash(rm \"c:\\\\Users\\\\PC\\\\Documents\\\\Projects\\\\AdminApp\\\\navyteam\\\\app\\\\\\(app\\)\\\\\\(tabs\\)\\\\clients\\\\[id].tsx\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\PC\\\\Documents\\\\Projects\\\\AdminApp\\\\navyteam\\\\app\\\\\\(app\\)\\\\\\(tabs\\)\\\\clients\\\\[id]\")",
+      "Bash(node drive4.js)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }

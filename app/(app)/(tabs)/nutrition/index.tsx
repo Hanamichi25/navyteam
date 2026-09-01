@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import {
 } from '@/features/nutrition';
 
 export default function NutritionScreen(): React.JSX.Element {
+  const router = useRouter();
   const plans = useNutritionPlans();
   const [category, setCategory] = useState<NutritionCategoryFilter>('all');
 
@@ -62,9 +64,7 @@ export default function NutritionScreen(): React.JSX.Element {
 
       <Fab
         accessibilityLabel="Crear plan de alimentación"
-        onPress={() => {
-          // TODO(backend): abrir editor de planes (Fase 5).
-        }}
+        onPress={() => router.push('/(app)/(tabs)/nutrition/new')}
       />
     </SafeAreaView>
   );

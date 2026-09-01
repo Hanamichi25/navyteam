@@ -1,13 +1,13 @@
-import { delay } from '@/lib/delay';
 import type { NutritionPlan } from '@/types/nutrition';
 
 /**
- * Catálogo de planes de alimentación simulado.
+ * Datos semilla de planes de alimentación, usados por
+ * `nutritionGateway.mock.ts` para sembrar AsyncStorage la primera vez que se
+ * lee.
  *
- * TODO(backend): reemplazar por `GET /nutrition-plans` filtrando por el entrenador.
+ * TODO(backend): estos datos desaparecen al conectar el backend real (Fase 9).
  */
-
-const PLANS: readonly NutritionPlan[] = [
+export const NUTRITION_PLANS_SEED: readonly NutritionPlan[] = [
   {
     id: 'nut_001',
     name: 'Plan Déficit Calórico',
@@ -45,9 +45,3 @@ const PLANS: readonly NutritionPlan[] = [
     imageUrl: 'https://picsum.photos/seed/navyteam-recomp/640/360',
   },
 ];
-
-export async function fetchMockNutritionPlans(): Promise<NutritionPlan[]> {
-  // TODO(backend): sustituir por la llamada real.
-  await delay(600);
-  return [...PLANS];
-}

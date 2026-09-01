@@ -35,6 +35,13 @@ export interface AssignedRoutine {
   durationMin: number;
 }
 
+/**
+ * Campos editables al crear/actualizar un cliente.
+ * TODO(Fase 6): ampliar con teléfono, fecha de nacimiento, notas, etc. cuando
+ * exista el editor real de clientes.
+ */
+export type ClientInput = Omit<Client, 'id'>;
+
 /** Detalle completo de un cliente (pantalla "Perfil de Usuario"). */
 export interface ClientDetail extends Client {
   /** Mes y año de alta (ej: "Ene 2025"). */

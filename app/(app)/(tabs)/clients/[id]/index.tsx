@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -14,6 +14,7 @@ import {
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
   useClient,
+  useUnassignRoutineFromClient,
   WeightProgressCard,
 } from '@/features/clients';
 
@@ -29,6 +30,7 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useClient(id);
+  const unassignRoutine = useUnassignRoutineFromClient();
   const [tab, setTab] = useState<ProfileTab>('routines');
 
   return (
@@ -99,13 +101,27 @@ export default function ClientProfileScreen(): React.JSX.Element {
 
             {tab === 'routines' ? (
               <View className="gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/(app)/(tabs)/clients/${id}/assign-routine`)}
+                  className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+                >
+                  <Text className="text-sm font-semibold text-primary">+ Asignar rutina</Text>
+                </Pressable>
+
                 {client.data.assignedRoutines.length === 0 ? (
                   <Text className="text-sm text-ink-muted">
                     Sin rutinas asignadas.
                   </Text>
                 ) : (
                   client.data.assignedRoutines.map((routine) => (
-                    <AssignedRoutineRow key={routine.id} routine={routine} />
+                    <AssignedRoutineRow
+                      key={routine.id}
+                      routine={routine}
+                      onRemove={() =>
+                        unassignRoutine.mutate({ clientId: id, routineId: routine.id })
+                      }
+                    />
                   ))
                 )}
               </View>

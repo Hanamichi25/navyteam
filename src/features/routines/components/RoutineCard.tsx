@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/Badge';
 import type { Routine } from '@/types/routine';
@@ -7,11 +7,12 @@ import { ROUTINE_LEVEL_LABEL } from '../labels';
 
 interface RoutineCardProps {
   routine: Routine;
+  onPress?: () => void;
 }
 
 /** Tarjeta del catálogo de rutinas: portada + metadatos. */
-export function RoutineCard({ routine }: RoutineCardProps): React.JSX.Element {
-  return (
+export function RoutineCard({ routine, onPress }: RoutineCardProps): React.JSX.Element {
+  const content = (
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
       <View>
         <Image
@@ -50,5 +51,13 @@ export function RoutineCard({ routine }: RoutineCardProps): React.JSX.Element {
         </View>
       </View>
     </View>
+  );
+
+  if (!onPress) return content;
+
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      {content}
+    </Pressable>
   );
 }
