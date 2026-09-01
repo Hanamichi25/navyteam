@@ -21,8 +21,26 @@ function placeholderAvatarUrl(): string {
   return `https://i.pravatar.cc/150?img=${seed}`;
 }
 
+/**
+ * Rellena con valores por defecto los campos que la Fase 6 agregó a
+ * `ClientDetail` (`measurements`, `birthDate`, ...). Sin esto, un cliente
+ * guardado en AsyncStorage/localStorage por una versión anterior del mock
+ * (Fases 3-5) llega con esos campos `undefined` y rompe el perfil (la
+ * gráfica y el historial hacen `.length`/`.sort()` sobre `measurements`).
+ * TODO(backend): un backend real no necesita esto — la migración de
+ * esquema se hace con una migración de BD, no en el cliente.
+ */
+function normalizeClient(client: ClientDetail): ClientDetail {
+  return {
+    ...client,
+    birthDate: client.birthDate ?? '',
+    measurements: client.measurements ?? [],
+  };
+}
+
 async function readAll(): Promise<ClientDetail[]> {
-  return readJSON<ClientDetail[]>(STORAGE_KEY, Object.values(CLIENT_DETAILS_SEED));
+  const all = await readJSON<ClientDetail[]>(STORAGE_KEY, Object.values(CLIENT_DETAILS_SEED));
+  return all.map(normalizeClient);
 }
 
 function toListItem(detail: ClientDetail): Client {
