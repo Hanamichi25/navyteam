@@ -78,24 +78,94 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
 
 ---
 
-## Objetivo de la PRÓXIMA fase (Fase 3 — Backend real de autenticación)
+## Reordenamiento del roadmap (decidido)
+
+El **backend real de auth se movió al final** (antes Fase 3, ahora Fase 8). Con el patrón
+Gateway, cada módulo habla con una interfaz; da igual si detrás hay un mock o un backend real,
+así que conviene construir toda la funcionalidad con mocks primero y hacer el swap de backend
+casi al final.
+
+**Decisiones tomadas para las fases de CRUD:**
+- El **registro de entrenamientos (reps/pesos) lo hace el entrenador** desde el panel. No hay
+  app ni login de cliente todavía (eso queda para "Futuro").
+- Los **planes de alimentación son solo objetivo**: kcal/día + macros (P/C/G) + notas de texto
+  libre. Sin catálogo de alimentos.
+- Los **Gateways mock persisten en el dispositivo** con `@react-native-async-storage/async-storage`
+  (seed inicial desde los `*.mock.ts` actuales). Así el flujo de seguimiento se puede probar de
+  verdad sin backend. Se descartan al conectar el backend real.
+
+---
+
+## Objetivo de la PRÓXIMA fase (Fase 3 — Capa de datos y edición)
+
+Preparar la infraestructura común que necesitan todos los CRUD siguientes. **Sin backend real.**
+
+**Alcance:**
+1. **Patrón Gateway** en cada feature de dominio (`clients`, `routines`, `nutrition`, y las nuevas):
+   `src/features/<x>/gateway.ts` con la interfaz (`list`, `get`, `create`, `update`, `remove`
+   según aplique).
+2. **Implementación mock persistente**: `src/features/<x>/mocks/<x>Gateway.mock.ts` — datos en
+   memoria respaldados en **AsyncStorage** (`npx expo install @react-native-async-storage/async-storage`).
+   Sigue simulando latencia (delay) y expone un caso de error. Seed desde los `*.mock.ts` actuales
+   si el storage está vacío.
+3. Los Gateways se inyectan desde `app/_layout.tsx` (Context por feature o uno agregado).
+4. **`@tanstack/react-query`**: `QueryClientProvider` en `app/_layout.tsx`. Lecturas → `useQuery`,
+   mutaciones → `useMutation` + `invalidateQueries`. `src/lib/useAsyncData.ts` se retira poco a poco.
+5. **Scaffolding de formularios**: campos reutilizables (`TextField`, `Select`, `NumberField`,
+   `DateField`) sobre RHF + Zod, y patrón de pantalla crear/editar (ruta dedicada o modal).
+
+---
+
+## Fases 4–7 — CRUD y seguimiento (con mocks)
+
+Cada una construye sobre la capa de la Fase 3. No hay mockups de los editores → diseñar con el
+sistema visual actual (mismos tokens y componentes). Conectar el FAB `+` y el botón "⋯" de cada
+pantalla a su formulario.
+
+- **Fase 4 — Ejercicios + CRUD de Rutinas.** Nueva feature `exercises`: catálogo (nombre, grupo
+  muscular, equipo, descripción/media opcional) con su CRUD y filtro por grupo muscular. Editor de
+  rutina: nombre, categoría, nivel y **lista ordenada de bloques de ejercicio** (cada bloque
+  referencia un `Exercise` y define series, rango de reps, carga sugerida, descanso). Reordenar
+  bloques. Asignar / desasignar rutina a clientes.
+- **Fase 5 — CRUD de Alimentación.** Editor de plan (nombre, categoría, kcal/día, macros que
+  sumen 100, notas). Asignar / desasignar plan a clientes.
+- **Fase 6 — CRUD de Clientes + perfil ampliado.** Alta/edición: nombre, email, teléfono,
+  **fecha de nacimiento**, avatar, objetivo, notas. **Historial de mediciones** (`BodyMeasurement`:
+  fecha + peso, y otras medidas opcionales). Perfil ampliado: edad calculada, IMC recalculado,
+  **gráfica de evolución de peso**, adherencia.
+- **Fase 7 — Registro de entrenamientos + seguimiento.** Modelo: `WorkoutSession`
+  (cliente + rutina + fecha) → `ExerciseLog` por ejercicio → `SetLog` (nº serie, reps, peso, RPE
+  opcional). Flujo desde el perfil del cliente, lo hace **el entrenador**: "Registrar sesión" →
+  rutina asignada → series por ejercicio → guardar. Historial de sesiones. **Progreso por
+  ejercicio**: progresión de carga (gráfica), volumen, PRs. Dashboard y perfil del cliente pasan
+  a mostrar métricas reales derivadas del logging.
+
+---
+
+## Fase 8 — Backend real de autenticación
 
 Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz que consume la UI.
 
 **Alcance:**
 1. **Decidir el proveedor de backend PRIMERO** (ver "Decisión de backend" abajo). No escribir
    código de integración ni instalar SDKs de proveedor hasta que esté decidido — preguntar.
-2. Introducir el patrón **Gateway** (inversión de dependencias) en `src/features/auth`:
-   - `src/features/auth/gateway.ts` → interfaz `AuthGateway` (`signIn`, `signOut`, `getSession`, `refresh`).
-   - El mock actual pasa a ser una implementación más de esa interfaz (`mockAuthGateway`), útil para tests y desarrollo offline.
-   - La implementación real (`supabaseAuthGateway` / `cognitoAuthGateway` / …) se inyecta desde `app/_layout.tsx`.
-3. `authStore` deja de importar el mock directamente; recibe el `AuthGateway` por inyección.
-4. **Persistencia de sesión** con `expo-secure-store` (access token en memoria, refresh token en secure-store).
-5. Manejo de **expiración y refresh** de sesión (interceptor / auto-refresh).
-6. Añadir **`@tanstack/react-query`** para estado de servidor (cache, reintentos).
+2. `src/features/auth/gateway.ts` → interfaz `AuthGateway` (`signIn`, `signOut`, `getSession`, `refresh`).
+   El mock actual pasa a ser `mockAuthGateway`. La implementación real
+   (`supabaseAuthGateway` / `cognitoAuthGateway` / …) se inyecta desde `app/_layout.tsx`.
+3. `authStore` recibe el `AuthGateway` por inyección, no lo importa.
+4. **Persistencia de sesión** con `expo-secure-store` (access token en memoria, refresh en secure-store).
+5. Manejo de **expiración y refresh** de sesión.
 
-**No hacer en esta fase salvo que se pida:** registro, recuperación de contraseña, biometría,
-OAuth social, notificaciones push, offline-first / SQLite.
+**No hacer salvo que se pida:** registro, recuperación de contraseña, biometría, OAuth social.
+
+---
+
+## Fase 9 — Conectar todos los Gateways a datos reales
+
+Con el proveedor elegido y `AuthGateway` real en marcha, migrar cada `*Gateway` mock a su
+implementación real: esquema de BD (clientes, medidas, ejercicios, rutinas, planes, sesiones,
+series), permisos/RLS, migraciones. Los mocks quedan como implementación de referencia para
+tests y desarrollo offline.
 
 ---
 
@@ -108,8 +178,8 @@ Aún **no está decidido**. Candidatos:
 | **Supabase** | Postgres + Auth + Storage + RLS + Realtime; camino más corto desde los mocks; coincide con la spec del repo; portable (es Postgres estándar) | SaaS gestionado |
 | **AWS serverless** | Control y escala; encaja si el equipo ya vive en AWS. Stack: API Gateway + Lambda + Aurora Serverless v2 / DynamoDB + Cognito + S3, o Amplify Gen 2 | Más piezas de infra; Cognito incómodo; más lento al MVP |
 
-**Regla:** al arrancar la Fase 3, confirmar con el usuario qué proveedor se usa antes de instalar
-dependencias. Independientemente del proveedor, el código se escribe contra la interfaz `AuthGateway`,
+**Regla:** al arrancar la Fase 8, confirmar con el usuario qué proveedor se usa antes de instalar
+dependencias. Independientemente del proveedor, el código se escribe contra las interfaces `Gateway`,
 nunca contra el SDK del proveedor directamente en la UI o el store.
 
 ---
@@ -149,11 +219,17 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens`)
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
 
-**Previsto para Fase 3+ (instalar cuando toque, con confirmación):**
-- `@tanstack/react-query` — estado de servidor
+**Previsto para Fase 3 (aprobado, instalar cuando toque):**
+- `@tanstack/react-query` — cache + invalidación tras mutaciones
+- `@react-native-async-storage/async-storage` — persistencia de los Gateways mock
+
+**Previsto para Fase 8+ (instalar cuando toque, con confirmación):**
 - `expo-secure-store` — tokens
 - SDK del proveedor de backend elegido (`@supabase/supabase-js` u equivalente)
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
+
+**Posible en fases de CRUD (confirmar):** una librería de gráficas (evolución de peso,
+progresión de carga) — p. ej. `react-native-gifted-charts` o SVG a mano.
 
 **No agregar librerías fuera de lo previsto sin explicar por qué y confirmar.**
 
@@ -206,11 +282,13 @@ src/
 
 ## Mocks
 
-Mientras un módulo no tenga backend real, su data sale de `*.mock.ts` que:
-- Simulan latencia (delay 500–1000ms) para ver los estados de loading.
-- Incluyen al menos un caso de error.
-- Implementan **la misma interfaz `Gateway`** que tendrá la versión real, para que el swap sea
+Mientras un módulo no tenga backend real, su data sale de un mock que:
+- Simula latencia (delay 500–1000ms) para ver los estados de loading.
+- Incluye al menos un caso de error.
+- Implementa **la misma interfaz `Gateway`** que tendrá la versión real, para que el swap sea
   cambio de implementación, no de interfaz.
+- Desde la Fase 3, además **persiste en AsyncStorage** (create/update/remove sobreviven al
+  recargar). El `*.mock.ts` de datos actual sirve de **seed** cuando el storage está vacío.
 
 Los mocks **no se borran** al conectar el backend: pasan a ser la implementación de referencia
 para tests y desarrollo offline.
@@ -267,9 +345,13 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 ## Roadmap de fases
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
-2. ✅ **Fase 2** — Resto de pantallas con mocks (Menú lateral, Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación) + navegación real (Tabs + Drawer).
-3. ⏳ **Fase 3** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh + React Query).
-4. **Fase 4** — Conectar los módulos de dominio (usuarios, rutinas, nutrición) a datos reales vía Gateways.
-5. **Fase 5** — CRUD completo: crear/editar rutinas, planes y clientes (los FAB `+` y formularios).
-6. **Fase 6** — Facturación.
-7. **Futuro** — Monorepo + extracción de módulos reutilizables; offline-first; notificaciones; builds nativas (EAS Build) y publicación en tiendas.
+2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
+3. ⏳ **Fase 3** — Capa de datos: patrón Gateway, mocks persistentes (AsyncStorage), React Query, scaffolding de formularios.
+4. **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
+5. **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
+6. **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
+7. **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso.
+8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).
+9. **Fase 9** — Conectar todos los Gateways a datos reales (esquema BD, permisos, migraciones).
+10. **Fase 10** — Facturación.
+11. **Futuro** — Monorepo + extracción de módulos; vista/login de **cliente** (que el cliente registre sus propios entrenos); offline-first; notificaciones; EAS Build + tiendas.
