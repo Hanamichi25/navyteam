@@ -45,36 +45,43 @@ La primera versión está construida y **desplegada en EAS Hosting (web)**.
 
 ---
 
-## Objetivo de la PRÓXIMA fase (Fase 2 — Pantallas restantes, con mocks)
+## Fase 2 — Pantallas restantes, con mocks (EN CURSO)
 
 Construir el resto de la app **siguiendo los mockups de `resources/`**, todavía con **datos mock**
 (mismo patrón que Fase 1: `*.mock.ts` con delay y caso de error). **Cero backend real en esta fase.**
 
-### Navegación (primero)
+### Hecho
 
-Hoy la barra inferior (`BottomNav`) es solo presentacional. En Fase 2 pasa a navegación real:
-- **Tabs de Expo Router** con 5 secciones: `Inicio` (dashboard actual), `Usuarios`, `Rutinas`, `Alimentación`, `Perfil`.
-- **Drawer** (menú lateral) que envuelve las tabs, abierto desde el icono ☰ del header.
-- Requiere `@react-navigation/drawer` (instalar con `npx expo install`).
-- `app/(tabs)/_layout.tsx` → `Tabs`; nuevo `app/(app)/_layout.tsx` o layout Drawer que lo contiene. Mantener el guard de sesión.
+- **Navegación real**: `app/(app)/_layout.tsx` = Drawer (menú lateral, `AppDrawerContent`) que
+  envuelve `app/(app)/(tabs)/_layout.tsx` = Tabs de 5 secciones (Inicio, Usuarios, Rutinas,
+  Alimentación, Perfil). Guard de sesión en `(app)/_layout.tsx`. `@react-navigation/drawer` instalado.
+  - ⚠️ Expo SDK 56+ prohíbe importar `@react-navigation/native`. Para abrir el Drawer se usa
+    `src/lib/openDrawer.ts` (despacha `{ type: 'OPEN_DRAWER' }`), no `DrawerActions`.
+- **Menú lateral** (`navyteam-menu.png`) — `AppDrawerContent`: header de perfil + 7 items
+  (Mensajes con badge) + Ayuda y Soporte + Cerrar Sesión (rojo) + versión. Item activo resaltado.
+- **Mis Usuarios** (`navyteam-usuarios.png`) → `app/(app)/(tabs)/clients/index.tsx`. Feature `clients`.
+- **Perfil de Usuario** (`navyteam-perfil-usuario.png`) → `clients/[id].tsx` (Stack anidado en la tab).
+- **Rutinas** (`navyteam-rutinas.png`) → `(tabs)/routines.tsx`. Feature `routines`.
+- **Planes de Alimentación** (`navyteam-alimentacion.png`) → `(tabs)/nutrition.tsx`. Feature `nutrition`.
+- **Perfil entrenador** (sin mockup) → `(tabs)/profile.tsx`, provisional.
+- Placeholders del Drawer: `(app)/messages.tsx`, `stats.tsx`, `settings.tsx`, `support.tsx` → `ComingSoon`.
+- UI compartida nueva en `src/components/`: `Avatar`, `Badge`, `ChipGroup`, `Fab`, `FeedbackState`,
+  `ListRow`, `MacroBar`, `MetricTile`, `ProgressBar`, `ScreenHeader`, `SearchField`, `ComingSoon`, `AppDrawerContent`.
+- Helpers en `src/lib/`: `delay`, `useAsyncData` (máquina loading/ready/error), `openDrawer`.
+- Barrels `index.ts` en `auth`, `dashboard`, `clients`, `routines`, `nutrition`.
 
-### Pantallas
+### Pendiente / notas
 
-| Pantalla | Mockup | Ruta | Notas |
-|---|---|---|---|
-| **Menú lateral** | `navyteam-menu.png` | Drawer content | Header (avatar, nombre, rol, email). Items: Inicio, Mis Usuarios, Rutinas, Alimentación, Mensajes (badge), Estadísticas, Configuración. Footer: Ayuda y Soporte, Cerrar Sesión (rojo). Versión abajo. Item activo resaltado. Mensajes/Estadísticas/Configuración → pantallas placeholder ("Próximamente") por ahora. |
-| **Mis Usuarios** | `navyteam-usuarios.png` | `(tabs)/users` | Título, buscador + botón filtro, lista de tarjetas de cliente (avatar, nombre, badge de objetivo, última actividad, chevron), FAB `+`. Badge: Pérdida de peso / Ganancia muscular / Mantenimiento (colores distintos). Tap en tarjeta → Perfil de Usuario. |
-| **Perfil de Usuario** (cliente) | `navyteam-perfil-usuario.png` | `(tabs)/users/[id]` | Header con back + "⋯". Avatar grande, nombre, badge, "Miembro desde". 3 stats (Peso, Altura, IMC). Card "Progreso de peso" (barra Inicio/Actual/Meta). Tabs internos: Rutinas / Alimentación / Mensajes. Lista de rutinas asignadas. Botón "Enviar Feedback". |
-| **Rutinas** | `navyteam-rutinas.png` | `(tabs)/routines` | Título + filtro. Chips de categoría (Todas/Fuerza/Cardio/Flexibilidad, scroll horizontal). Tarjetas con imagen de fondo, badge de nivel, nombre, "X min · N ejercicios", "Asignada a N usuarios". FAB `+`. |
-| **Planes de Alimentación** | `navyteam-alimentacion.png` | `(tabs)/nutrition` | Título + filtro. Chips (Todos/Pérdida de peso/Volumen/Mantenimiento). Tarjetas con imagen, badge, nombre, "N kcal/día", barra de macros (P/C/G) + porcentajes, "Asignado a N usuarios". FAB `+`. |
-| **Perfil** (entrenador) | *sin mockup* | `(tabs)/profile` | No hay diseño dedicado. Construir mínimo reutilizando el header del Drawer (avatar, nombre, rol, email) + acceso a Configuración y Cerrar Sesión. Marcar como provisional. |
+- Filtros por chip funcionan (client-side). El botón de filtro "⋯" del header y los FAB `+` son
+  placeholders con `// TODO(backend)` (formularios de alta van a Fase 5).
+- Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
+- Pantalla "Mensajes" (tab interno del perfil de cliente y sección del Drawer) sin contenido real.
 
 ### Reglas de Fase 2
 
-- Los FAB `+` (crear rutina / plan / usuario) y los formularios de creación/edición **no** entran en esta fase salvo que se pidan — el `+` puede quedar sin acción o abrir un placeholder.
-- Imágenes de tarjetas (rutinas/alimentación): URLs remotas en la data mock (igual que los avatares con `pravatar`). Opcional `expo-image` para mejor cache — confirmar antes de instalar.
+- Los FAB `+` (crear rutina / plan / usuario) y los formularios de creación/edición **no** entran en esta fase salvo que se pidan.
 - Cada pantalla nueva = su feature en `src/features/` con `index.ts`, `mocks/`, `components/`, tipos en `src/types/`.
-- Aplicar ya la **arquitectura de módulos** (abajo): límites estrictos, sin imports cruzados entre features.
+- Aplicar la **arquitectura de módulos** (abajo): límites estrictos, sin imports cruzados entre features salvo por su `index.ts`.
 
 ---
 
@@ -164,39 +171,45 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 
 ## Estructura de carpetas
 
-Actual (Fase 1) + destino tras Fase 2:
-
 ```
 app/                          # Expo Router (rutas = pantallas)
   _layout.tsx                 # Stack raíz + providers (aquí se inyectan los Gateways en Fase 3)
-  index.tsx                   # redirect según sesión
+  index.tsx                   # redirect según sesión → /(app)/(tabs)/dashboard | /(auth)/login
   (auth)/
     _layout.tsx               # si hay sesión → app
     login.tsx
-  (tabs)/                     # Fase 2: Tabs reales, envueltas por un Drawer. Guard de sesión.
-    _layout.tsx
-    dashboard.tsx             # tab Inicio
-    users/                    # tab Usuarios  → index.tsx (lista) + [id].tsx (perfil cliente)
-    routines.tsx              # tab Rutinas
-    nutrition.tsx             # tab Alimentación
-    profile.tsx               # tab Perfil (entrenador, provisional)
+  (app)/                      # área autenticada. Guard de sesión aquí.
+    _layout.tsx               # Drawer (drawerContent = AppDrawerContent)
+    (tabs)/
+      _layout.tsx             # Tabs (Inicio, Usuarios, Rutinas, Alimentación, Perfil)
+      dashboard.tsx           # tab Inicio
+      clients/                # tab Usuarios → _layout.tsx (Stack) + index.tsx (lista) + [id].tsx (perfil)
+      routines.tsx            # tab Rutinas
+      nutrition.tsx           # tab Alimentación
+      profile.tsx             # tab Perfil (entrenador, provisional)
+    messages.tsx              # placeholder (Drawer)
+    stats.tsx                 # placeholder (Drawer)
+    settings.tsx              # placeholder (Drawer)
+    support.tsx               # placeholder (Drawer)
 
 src/
-  components/                 # UI compartida y agnóstica (Button, Input, Card, DrawerContent...)
+  components/                 # UI compartida y agnóstica (Button, Input, Card, Badge, Avatar, Fab...)
+  lib/                        # helpers sin UI (delay, useAsyncData, openDrawer)
   features/
-    auth/                     # (existe)
-    dashboard/                # (existe)
-    users/                    # Fase 2 — lista de clientes + perfil de cliente
-    routines/                 # Fase 2
-    nutrition/                # Fase 2
+    auth/                     # login + sesión (Zustand)
+    dashboard/                # tab Inicio
+    clients/                  # lista de clientes + perfil de cliente
+    routines/                 # catálogo de rutinas
+    nutrition/                # catálogo de planes de alimentación
     <feature>/
       index.ts                # API pública del módulo (ÚNICA puerta de entrada)
       gateway.ts              # interfaz(es) de infra que el módulo necesita (desde Fase 3)
       components/
       hooks/
+      labels.ts               # mapeo enum → etiqueta/tono de UI
       store/
       mocks/                  # *.mock.ts — datos fake (+ implementación mock del gateway en Fase 3)
-  types/                      # tipos de dominio compartidos (auth, dashboard, user, routine, nutrition...)
+  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition)
 ```
 
 ---
@@ -264,7 +277,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 ## Roadmap de fases
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
-2. ⏳ **Fase 2** — Resto de pantallas con mocks (Menú lateral, Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación) + navegación real (Tabs + Drawer).
+2. ⏳ **Fase 2 (EN CURSO)** — Resto de pantallas con mocks (Menú lateral, Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación) + navegación real (Tabs + Drawer). Pantallas y navegación construidas; pulido pendiente.
 3. **Fase 3** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh + React Query).
 4. **Fase 4** — Conectar los módulos de dominio (usuarios, rutinas, nutrición) a datos reales vía Gateways.
 5. **Fase 5** — CRUD completo: crear/editar rutinas, planes y clientes (los FAB `+` y formularios).

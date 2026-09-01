@@ -1,12 +1,14 @@
 import { Redirect } from 'expo-router';
 
-import { useAuthStore } from '@/features/auth/store/authStore';
+import { useAuthStore } from '@/features/auth';
 
-/** Punto de entrada: envía al dashboard si hay sesión mock activa, si no al login. */
+/** Punto de entrada: envía a la app si hay sesión mock activa, si no al login. */
 export default function Index(): React.JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
-    <Redirect href={isAuthenticated ? '/(tabs)/dashboard' : '/(auth)/login'} />
+    <Redirect
+      href={isAuthenticated ? '/(app)/(tabs)/dashboard' : '/(auth)/login'}
+    />
   );
 }

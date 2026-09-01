@@ -1,3 +1,4 @@
+import { delay } from '@/lib/delay';
 import type { DashboardData } from '@/types/dashboard';
 
 /**
@@ -7,10 +8,6 @@ import type { DashboardData } from '@/types/dashboard';
  */
 
 const DASHBOARD_DELAY_MS = 600;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 const DASHBOARD_DATA: DashboardData = {
   stats: [

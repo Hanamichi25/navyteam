@@ -25,7 +25,7 @@ export function LoginForm(): React.JSX.Element {
   const onSubmit = handleSubmit(async (values) => {
     const ok = await login(values);
     if (ok) {
-      router.replace('/(tabs)/dashboard');
+      router.replace('/(app)/(tabs)/dashboard');
     }
   });
 

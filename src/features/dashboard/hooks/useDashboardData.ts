@@ -1,47 +1,17 @@
-import { useEffect, useState } from 'react';
-
+import { useAsyncData, type AsyncState } from '@/lib/useAsyncData';
 import type { DashboardData } from '@/types/dashboard';
 import { fetchMockDashboard } from '../mocks/dashboardData.mock';
 
-type DashboardState =
-  | { status: 'loading'; data: null; error: null }
-  | { status: 'ready'; data: DashboardData; error: null }
-  | { status: 'error'; data: null; error: string };
-
 /**
- * Carga los datos del dashboard desde el mock.
+ * Carga los datos del dashboard.
  *
- * TODO(backend): reemplazar `fetchMockDashboard` por TanStack Query contra el
- * endpoint real (cache, reintentos, refetch en background).
+ * TODO(backend): en la Fase 3, `fetchMockDashboard` pasa por un Gateway y la
+ * carga se hace con TanStack Query.
  */
-export function useDashboardData(): DashboardState {
-  const [state, setState] = useState<DashboardState>({
-    status: 'loading',
-    data: null,
-    error: null,
-  });
-
-  useEffect(() => {
-    let active = true;
-
-    fetchMockDashboard()
-      .then((data) => {
-        if (active) setState({ status: 'ready', data, error: null });
-      })
-      .catch(() => {
-        if (active) {
-          setState({
-            status: 'error',
-            data: null,
-            error: 'No se pudieron cargar los datos del panel',
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return state;
+export function useDashboardData(): AsyncState<DashboardData> {
+  return useAsyncData(
+    fetchMockDashboard,
+    [],
+    'No se pudieron cargar los datos del panel',
+  );
 }
