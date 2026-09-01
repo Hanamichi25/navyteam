@@ -1,4 +1,5 @@
 import type { Client, ClientDetail, ClientInput } from '@/types/client';
+import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
 /**
@@ -18,4 +19,10 @@ export interface ClientsGateway {
    */
   assignRoutine(clientId: string, routine: Routine, schedule: string): Promise<ClientDetail>;
   unassignRoutine(clientId: string, routineId: string): Promise<ClientDetail>;
+  /**
+   * Asigna un plan de alimentación al cliente, reemplazando el anterior si
+   * había uno (un cliente tiene como mucho un plan a la vez).
+   */
+  assignPlan(clientId: string, plan: NutritionPlan): Promise<ClientDetail>;
+  unassignPlan(clientId: string): Promise<ClientDetail>;
 }

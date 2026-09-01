@@ -14,6 +14,7 @@ import {
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
   useClient,
+  useUnassignPlanFromClient,
   useUnassignRoutineFromClient,
   WeightProgressCard,
 } from '@/features/clients';
@@ -31,6 +32,7 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useClient(id);
   const unassignRoutine = useUnassignRoutineFromClient();
+  const unassignPlan = useUnassignPlanFromClient();
   const [tab, setTab] = useState<ProfileTab>('routines');
 
   return (
@@ -129,19 +131,34 @@ export default function ClientProfileScreen(): React.JSX.Element {
 
             {tab === 'nutrition' ? (
               <View className="gap-3">
-                {client.data.assignedPlanName ? (
-                  <View className="rounded-2xl border border-line bg-surface-subtle p-4">
-                    <Text className="text-sm font-bold text-ink">
-                      {client.data.assignedPlanName}
-                    </Text>
-                    <Text className="mt-0.5 text-xs text-ink-faint">
-                      Plan de alimentación asignado
-                    </Text>
+                {client.data.assignedPlan ? (
+                  <View className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-ink">
+                        {client.data.assignedPlan.name}
+                      </Text>
+                      <Text className="mt-0.5 text-xs text-ink-faint">
+                        {client.data.assignedPlan.kcalPerDay} kcal/día
+                      </Text>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Desasignar plan"
+                      hitSlop={8}
+                      onPress={() => unassignPlan.mutate(id)}
+                      className="h-8 w-8 items-center justify-center rounded-lg active:bg-rose-50"
+                    >
+                      <Text className="text-lg leading-none text-ink-faint">×</Text>
+                    </Pressable>
                   </View>
                 ) : (
-                  <Text className="text-sm text-ink-muted">
-                    Sin plan de alimentación asignado.
-                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push(`/(app)/(tabs)/clients/${id}/assign-plan`)}
+                    className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+                  >
+                    <Text className="text-sm font-semibold text-primary">+ Asignar plan</Text>
+                  </Pressable>
                 )}
               </View>
             ) : null}

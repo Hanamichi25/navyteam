@@ -2,6 +2,7 @@ import { delay } from '@/lib/delay';
 import { createId } from '@/lib/id';
 import { readJSON, writeJSON } from '@/lib/storage';
 import type { AssignedRoutine, Client, ClientDetail, ClientInput } from '@/types/client';
+import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 import type { ClientsGateway } from '../gateway';
 import { CLIENT_DETAILS_SEED } from './clients.mock';
@@ -61,7 +62,7 @@ export function createMockClientsGateway(): ClientsGateway {
         bmi: 0,
         weightProgress: { startKg: 0, currentKg: 0, goalKg: 0 },
         assignedRoutines: [],
-        assignedPlanName: null,
+        assignedPlan: null,
       };
       await writeJSON(STORAGE_KEY, [...all, detail]);
       return detail;
@@ -132,6 +133,39 @@ export function createMockClientsGateway(): ClientsGateway {
         ...client,
         assignedRoutines: client.assignedRoutines.filter((assigned) => assigned.id !== routineId),
       };
+      const next = [...all];
+      next[index] = updated;
+      await writeJSON(STORAGE_KEY, next);
+      return updated;
+    },
+
+    async assignPlan(clientId: string, plan: NutritionPlan) {
+      await delay(500);
+      const all = await readAll();
+      const index = all.findIndex((client) => client.id === clientId);
+      if (index === -1) {
+        throw new Error(`Cliente no encontrado: ${clientId}`);
+      }
+      const updated: ClientDetail = {
+        ...all[index]!,
+        assignedPlan: { id: plan.id, name: plan.name, kcalPerDay: plan.kcalPerDay },
+      };
+      const next = [...all];
+      next[index] = updated;
+      await writeJSON(STORAGE_KEY, next);
+      // TODO(backend): en un backend real esto también actualizaría
+      // `assignedCount` en el catálogo de planes (join en servidor).
+      return updated;
+    },
+
+    async unassignPlan(clientId: string) {
+      await delay(400);
+      const all = await readAll();
+      const index = all.findIndex((client) => client.id === clientId);
+      if (index === -1) {
+        throw new Error(`Cliente no encontrado: ${clientId}`);
+      }
+      const updated: ClientDetail = { ...all[index]!, assignedPlan: null };
       const next = [...all];
       next[index] = updated;
       await writeJSON(STORAGE_KEY, next);

@@ -2,11 +2,13 @@ export { AssignedRoutineRow } from './components/AssignedRoutineRow';
 export { ClientListItem } from './components/ClientListItem';
 export { WeightProgressCard } from './components/WeightProgressCard';
 export {
+  useAssignPlanToClient,
   useAssignRoutineToClient,
   useClient,
   useClients,
   useCreateClient,
   useRemoveClient,
+  useUnassignPlanFromClient,
   useUnassignRoutineFromClient,
   useUpdateClient,
 } from './hooks/useClients';

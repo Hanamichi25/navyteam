@@ -146,8 +146,16 @@ pantalla a su formulario.
     de `AppDrawerContent`, que ya lo usaba desde la Fase 2— funcionaba en la versión web. Se
     añadió `src/lib/confirm.ts` (usa `window.confirm` en web, `Alert.alert` en nativo) y se
     migraron los tres usos existentes.
-- **Fase 5 — CRUD de Alimentación.** Editor de plan (nombre, categoría, kcal/día, macros que
-  sumen 100, notas). Asignar / desasignar plan a clientes.
+- ✅ **Fase 5 — CRUD de Alimentación.** Mismo patrón que la Fase 4, aplicado a `nutrition`:
+  formulario compartido `NutritionPlanForm` (`new.tsx`/`[id].tsx` en `app/(app)/(tabs)/nutrition/`)
+  con nombre, categoría, kcal/día, macros que suman 100 y notas de texto libre (nuevo campo
+  `NutritionPlan.notes?`); `[id].tsx` agrega el botón eliminar con `confirm()`. Asignar/desasignar
+  plan a un cliente desde su perfil (tab Alimentación → "+ Asignar plan" → tocar un plan lo asigna
+  al instante, sin paso de confirmar aparte, porque a diferencia de las rutinas un cliente tiene
+  **como mucho un plan a la vez** y no lleva horario) vía `ClientsGateway.assignPlan`/`unassignPlan`.
+  `ClientDetail.assignedPlanName: string | null` (un string suelto) se subió de nivel a
+  `assignedPlan: AssignedNutritionPlan | null` ({id, name, kcalPerDay}), igual que ya existía
+  `AssignedRoutine` para rutinas — así se puede desasignar por id en vez de por nombre.
 - **Fase 6 — CRUD de Clientes + perfil ampliado.** Alta/edición: nombre, email, teléfono,
   **fecha de nacimiento**, avatar, objetivo, notas. **Historial de mediciones** (`BodyMeasurement`:
   fecha + peso, y otras medidas opcionales). Perfil ampliado: edad calculada, IMC recalculado,
@@ -373,7 +381,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
 3. ✅ **Fase 3** — Capa de datos: patrón Gateway, mocks persistentes (AsyncStorage), React Query, scaffolding de formularios.
 4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
-5. **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
+5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
 7. **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso.
 8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).

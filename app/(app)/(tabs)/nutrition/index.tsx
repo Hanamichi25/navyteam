@@ -58,7 +58,12 @@ export default function NutritionScreen(): React.JSX.Element {
           keyExtractor={(plan) => plan.id}
           contentContainerClassName="px-5 pb-24 gap-4"
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <NutritionPlanCard plan={item} />}
+          renderItem={({ item }) => (
+            <NutritionPlanCard
+              plan={item}
+              onPress={() => router.push(`/(app)/(tabs)/nutrition/${item.id}`)}
+            />
+          )}
         />
       )}
 

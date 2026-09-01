@@ -35,6 +35,13 @@ export interface AssignedRoutine {
   durationMin: number;
 }
 
+/** Plan de alimentación asignado a un cliente (resumen; como mucho uno a la vez). */
+export interface AssignedNutritionPlan {
+  id: string;
+  name: string;
+  kcalPerDay: number;
+}
+
 /**
  * Campos editables al crear/actualizar un cliente.
  * TODO(Fase 6): ampliar con teléfono, fecha de nacimiento, notas, etc. cuando
@@ -51,6 +58,6 @@ export interface ClientDetail extends Client {
   bmi: number;
   weightProgress: WeightProgress;
   assignedRoutines: AssignedRoutine[];
-  /** Nombre del plan de alimentación asignado, o `null` si no tiene. */
-  assignedPlanName: string | null;
+  /** Plan de alimentación asignado, o `null` si no tiene ninguno. */
+  assignedPlan: AssignedNutritionPlan | null;
 }

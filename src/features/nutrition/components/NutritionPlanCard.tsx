@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/Badge';
 import { formatMacros, MacroBar } from '@/components/MacroBar';
@@ -8,11 +8,12 @@ import { NUTRITION_CATEGORY_LABEL, NUTRITION_CATEGORY_TONE } from '../labels';
 
 interface NutritionPlanCardProps {
   plan: NutritionPlan;
+  onPress?: () => void;
 }
 
 /** Tarjeta del catálogo de planes de alimentación. */
-export function NutritionPlanCard({ plan }: NutritionPlanCardProps): React.JSX.Element {
-  return (
+export function NutritionPlanCard({ plan, onPress }: NutritionPlanCardProps): React.JSX.Element {
+  const content = (
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
       <View>
         <Image
@@ -51,5 +52,13 @@ export function NutritionPlanCard({ plan }: NutritionPlanCardProps): React.JSX.E
         </View>
       </View>
     </View>
+  );
+
+  if (!onPress) return content;
+
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      {content}
+    </Pressable>
   );
 }

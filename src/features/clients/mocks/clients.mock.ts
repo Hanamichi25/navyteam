@@ -57,7 +57,7 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_001', name: 'Rutina de Piernas', schedule: 'Lun/Mié/Vie', exerciseCount: 8, durationMin: 45 },
       { id: 'rtn_002', name: 'Cardio HIIT', schedule: 'Mar/Jue', exerciseCount: 5, durationMin: 20 },
     ],
-    assignedPlanName: 'Plan Déficit Calórico',
+    assignedPlan: { id: 'nut_001', name: 'Plan Déficit Calórico', kcalPerDay: 1800 },
   },
   cli_pedro: {
     ...CLIENTS[1]!,
@@ -70,7 +70,7 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_003', name: 'Fuerza Superior', schedule: 'Lun/Jue', exerciseCount: 10, durationMin: 50 },
       { id: 'rtn_006', name: 'Empuje / Tirón', schedule: 'Mar/Vie', exerciseCount: 9, durationMin: 55 },
     ],
-    assignedPlanName: 'Plan Volumen Limpio',
+    assignedPlan: { id: 'nut_002', name: 'Plan Volumen Limpio', kcalPerDay: 3200 },
   },
   cli_ana: {
     ...CLIENTS[2]!,
@@ -82,7 +82,7 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
     assignedRoutines: [
       { id: 'rtn_004', name: 'Flexibilidad Total', schedule: 'Lun/Mié/Vie', exerciseCount: 6, durationMin: 30 },
     ],
-    assignedPlanName: 'Plan Mantenimiento Equilibrado',
+    assignedPlan: { id: 'nut_003', name: 'Plan Mantenimiento Equilibrado', kcalPerDay: 2400 },
   },
   cli_luis: {
     ...CLIENTS[3]!,
@@ -94,7 +94,7 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
     assignedRoutines: [
       { id: 'rtn_003', name: 'Fuerza Superior', schedule: 'Lun/Mié/Vie', exerciseCount: 10, durationMin: 50 },
     ],
-    assignedPlanName: 'Plan Volumen Limpio',
+    assignedPlan: { id: 'nut_002', name: 'Plan Volumen Limpio', kcalPerDay: 3200 },
   },
   cli_sofia: {
     ...CLIENTS[4]!,
@@ -107,6 +107,6 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_002', name: 'Cardio HIIT', schedule: 'Lun/Mié/Vie', exerciseCount: 5, durationMin: 20 },
       { id: 'rtn_005', name: 'Cardio Quema Grasa', schedule: 'Sáb', exerciseCount: 7, durationMin: 35 },
     ],
-    assignedPlanName: 'Plan Déficit Calórico',
+    assignedPlan: { id: 'nut_001', name: 'Plan Déficit Calórico', kcalPerDay: 1800 },
   },
 };

@@ -11,6 +11,7 @@ export const nutritionPlanSchema = z
     proteinPct: z.number().min(0, 'Debe ser 0 o más').max(100, 'No puede superar 100').nullable(),
     carbsPct: z.number().min(0, 'Debe ser 0 o más').max(100, 'No puede superar 100').nullable(),
     fatPct: z.number().min(0, 'Debe ser 0 o más').max(100, 'No puede superar 100').nullable(),
+    notes: z.string(),
   })
   .superRefine((values, ctx) => {
     if (values.category === null) {

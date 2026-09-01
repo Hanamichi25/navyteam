@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useClientsGateway } from '@/gateways';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { Client, ClientDetail, ClientInput } from '@/types/client';
+import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
 const clientsKey = ['clients'] as const;
@@ -94,6 +95,33 @@ export function useUnassignRoutineFromClient() {
       gateway.unassignRoutine(clientId, routineId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Asigna un plan de alimentación a un cliente e invalida su detalle. */
+export function useAssignPlanToClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, plan }: { clientId: string; plan: NutritionPlan }) =>
+      gateway.assignPlan(clientId, plan),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Desasigna el plan de alimentación de un cliente e invalida su detalle. */
+export function useUnassignPlanFromClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (clientId: string) => gateway.unassignPlan(clientId),
+    onSuccess: (_data, clientId) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(clientId) });
       queryClient.invalidateQueries({ queryKey: clientsKey });
     },
   });
