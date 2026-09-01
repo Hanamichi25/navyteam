@@ -22,17 +22,23 @@ Documentos de referencia (leer antes de generar código si aplica a la tarea):
 
 ---
 
-## Estado actual (Fase 1 — COMPLETADA)
+## Estado actual (Fases 1 y 2 — COMPLETADAS)
 
-La primera versión está construida y **desplegada en EAS Hosting (web)**.
+La app está construida hasta el nivel de UI completa con **datos mock**, y la Fase 1
+está **desplegada en EAS Hosting (web)**.
 
 **Qué existe:**
-- Pantallas `Login` y `Dashboard` funcionando, fieles a los mockups de `resources/`.
-- Navegación con Expo Router: `app/index.tsx` (redirect según sesión), `app/(auth)/`, `app/(tabs)/`.
+- **Todas las pantallas de los mockups** de `resources/`: Login, Dashboard, Menú lateral,
+  Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación, Perfil (entrenador, provisional).
+- **Navegación real** con Expo Router: `app/index.tsx` (redirect según sesión) → `app/(auth)/login`
+  o `app/(app)/` (Drawer + Tabs de 5 secciones). Guards de sesión en `(auth)/` y `(app)/`.
 - Estado de sesión en memoria con Zustand (`src/features/auth/store/authStore.ts`).
-- **Toda la data es mock local** (`*.mock.ts` con delay artificial y caso de error).
+- **Toda la data es mock local** (`*.mock.ts` con delay artificial y caso de error), cargada
+  con `src/lib/useAsyncData.ts` (máquina `loading | ready | error`).
+- Features de dominio: `auth`, `dashboard`, `clients`, `routines`, `nutrition` — cada una con
+  `index.ts` como API pública.
 - Estilos con **NativeWind v4** (tema en `tailwind.config.js`: `primary`, `ink`, `surface`, `line`).
-- Formulario con React Hook Form + Zod.
+- Formularios con React Hook Form + Zod.
 
 **Credenciales mock** (`src/features/auth/mocks/users.mock.ts`):
 - `entrenador@fitcoach.com` / `navyteam123`
@@ -45,47 +51,34 @@ La primera versión está construida y **desplegada en EAS Hosting (web)**.
 
 ---
 
-## Fase 2 — Pantallas restantes, con mocks (EN CURSO)
+## Fase 2 — Pantallas restantes, con mocks (COMPLETADA)
 
-Construir el resto de la app **siguiendo los mockups de `resources/`**, todavía con **datos mock**
-(mismo patrón que Fase 1: `*.mock.ts` con delay y caso de error). **Cero backend real en esta fase.**
+Toda la UI de los mockups está construida con datos mock y navegación real. Detalle:
 
-### Hecho
-
-- **Navegación real**: `app/(app)/_layout.tsx` = Drawer (menú lateral, `AppDrawerContent`) que
-  envuelve `app/(app)/(tabs)/_layout.tsx` = Tabs de 5 secciones (Inicio, Usuarios, Rutinas,
-  Alimentación, Perfil). Guard de sesión en `(app)/_layout.tsx`. `@react-navigation/drawer` instalado.
+- **Navegación**: `app/(app)/_layout.tsx` = Drawer (`AppDrawerContent`) que envuelve
+  `app/(app)/(tabs)/_layout.tsx` = Tabs de 5 secciones. Perfil de cliente = Stack anidado
+  en la tab Usuarios (`clients/_layout.tsx`). Guard de sesión en `(app)/_layout.tsx`.
   - ⚠️ Expo SDK 56+ prohíbe importar `@react-navigation/native`. Para abrir el Drawer se usa
-    `src/lib/openDrawer.ts` (despacha `{ type: 'OPEN_DRAWER' }`), no `DrawerActions`.
-- **Menú lateral** (`navyteam-menu.png`) — `AppDrawerContent`: header de perfil + 7 items
-  (Mensajes con badge) + Ayuda y Soporte + Cerrar Sesión (rojo) + versión. Item activo resaltado.
-- **Mis Usuarios** (`navyteam-usuarios.png`) → `app/(app)/(tabs)/clients/index.tsx`. Feature `clients`.
-- **Perfil de Usuario** (`navyteam-perfil-usuario.png`) → `clients/[id].tsx` (Stack anidado en la tab).
-- **Rutinas** (`navyteam-rutinas.png`) → `(tabs)/routines.tsx`. Feature `routines`.
-- **Planes de Alimentación** (`navyteam-alimentacion.png`) → `(tabs)/nutrition.tsx`. Feature `nutrition`.
-- **Perfil entrenador** (sin mockup) → `(tabs)/profile.tsx`, provisional.
-- Placeholders del Drawer: `(app)/messages.tsx`, `stats.tsx`, `settings.tsx`, `support.tsx` → `ComingSoon`.
-- UI compartida nueva en `src/components/`: `Avatar`, `Badge`, `ChipGroup`, `Fab`, `FeedbackState`,
+    `src/lib/openDrawer.ts` (despacha `{ type: 'OPEN_DRAWER' }`), **no** `DrawerActions`.
+- **Pantallas** ↔ features: Menú lateral (`AppDrawerContent`), Mis Usuarios + Perfil de Usuario
+  (`clients`), Rutinas (`routines`), Planes de Alimentación (`nutrition`), Perfil entrenador
+  (`(tabs)/profile.tsx`, provisional).
+- Placeholders del Drawer: `(app)/{messages,stats,settings,support}.tsx` → componente `ComingSoon`.
+- UI compartida en `src/components/`: `Avatar`, `Badge`, `ChipGroup`, `Fab`, `FeedbackState`,
   `ListRow`, `MacroBar`, `MetricTile`, `ProgressBar`, `ScreenHeader`, `SearchField`, `ComingSoon`, `AppDrawerContent`.
-- Helpers en `src/lib/`: `delay`, `useAsyncData` (máquina loading/ready/error), `openDrawer`.
-- Barrels `index.ts` en `auth`, `dashboard`, `clients`, `routines`, `nutrition`.
+- Helpers en `src/lib/`: `delay`, `useAsyncData`, `openDrawer`.
 
-### Pendiente / notas
+### Deuda técnica / pulido pendiente
 
-- Filtros por chip funcionan (client-side). El botón de filtro "⋯" del header y los FAB `+` son
-  placeholders con `// TODO(backend)` (formularios de alta van a Fase 5).
+- Los FAB `+` y el botón de filtro "⋯" del header son placeholders con `// TODO(backend)`
+  → los formularios de alta/edición son **Fase 5**.
 - Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
-- Pantalla "Mensajes" (tab interno del perfil de cliente y sección del Drawer) sin contenido real.
-
-### Reglas de Fase 2
-
-- Los FAB `+` (crear rutina / plan / usuario) y los formularios de creación/edición **no** entran en esta fase salvo que se pidan.
-- Cada pantalla nueva = su feature en `src/features/` con `index.ts`, `mocks/`, `components/`, tipos en `src/types/`.
-- Aplicar la **arquitectura de módulos** (abajo): límites estrictos, sin imports cruzados entre features salvo por su `index.ts`.
+- Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
+- El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho.
 
 ---
 
-## Fase 3 — Backend real de autenticación
+## Objetivo de la PRÓXIMA fase (Fase 3 — Backend real de autenticación)
 
 Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz que consume la UI.
 
@@ -152,12 +145,9 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - Expo SDK 57 (managed) + TypeScript strict + Expo Router
 - Zustand (estado cliente) · React Hook Form + Zod (formularios)
 - NativeWind v4 + Tailwind (estilos) · `@expo/vector-icons` (iconos)
-- `react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens` (peers de Expo Router / NativeWind)
+- `@react-navigation/drawer` (menú lateral) + peers de Expo Router / NativeWind
+  (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens`)
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
-
-**Previsto para Fase 2 (instalar cuando toque, con confirmación):**
-- `@react-navigation/drawer` — menú lateral (Drawer)
-- `expo-image` — cache de imágenes en tarjetas (opcional)
 
 **Previsto para Fase 3+ (instalar cuando toque, con confirmación):**
 - `@tanstack/react-query` — estado de servidor
@@ -277,8 +267,8 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 ## Roadmap de fases
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
-2. ⏳ **Fase 2 (EN CURSO)** — Resto de pantallas con mocks (Menú lateral, Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación) + navegación real (Tabs + Drawer). Pantallas y navegación construidas; pulido pendiente.
-3. **Fase 3** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh + React Query).
+2. ✅ **Fase 2** — Resto de pantallas con mocks (Menú lateral, Mis Usuarios, Perfil de Usuario, Rutinas, Planes de Alimentación) + navegación real (Tabs + Drawer).
+3. ⏳ **Fase 3** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh + React Query).
 4. **Fase 4** — Conectar los módulos de dominio (usuarios, rutinas, nutrición) a datos reales vía Gateways.
 5. **Fase 5** — CRUD completo: crear/editar rutinas, planes y clientes (los FAB `+` y formularios).
 6. **Fase 6** — Facturación.
