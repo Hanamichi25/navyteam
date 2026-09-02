@@ -1,5 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+
+import { openDrawer } from '@/lib/openDrawer';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -13,7 +16,11 @@ interface ScreenHeaderProps {
   title: string;
   /** Muestra flecha de retroceso a la izquierda. */
   onBack?: () => void;
-  /** Muestra botón de menú (☰) a la izquierda. Ignorado si se pasa `onBack`. */
+  /**
+   * Handler del botón de menú (☰). Si no se pasa `onBack`, el ☰ se muestra
+   * SIEMPRE: sin `onMenu` explícito abre el Drawer por defecto. Ignorado si se
+   * pasa `onBack`.
+   */
   onMenu?: () => void;
   /** Botón de icono a la derecha (filtro, menú contextual...). */
   action?: HeaderAction;
@@ -46,6 +53,8 @@ export function ScreenHeader({
   action,
   centered = false,
 }: ScreenHeaderProps): React.JSX.Element {
+  const navigation = useNavigation();
+
   return (
     <View className="flex-row items-center justify-between gap-3 px-5 py-3">
       <View className="min-w-[40px] flex-row items-center">
@@ -55,13 +64,13 @@ export function ScreenHeader({
             onPress={onBack}
             accessibilityLabel="Volver"
           />
-        ) : onMenu ? (
+        ) : (
           <IconButton
             iconName="menu"
-            onPress={onMenu}
+            onPress={onMenu ?? (() => openDrawer(navigation))}
             accessibilityLabel="Abrir menú"
           />
-        ) : null}
+        )}
       </View>
 
       <Text
