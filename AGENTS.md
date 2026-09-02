@@ -74,9 +74,13 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
   → los formularios de alta/edición son **Fase 5**.
 - Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
 - Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
-- **El dashboard (`(tabs)/dashboard.tsx`) sigue con seed 100% estático** (`dashboardData.mock.ts`):
-  stats, actividad reciente y próximas sesiones no derivan de datos reales. Aplazado en la Fase 7
-  (decisión con el usuario); conectar en una fase posterior a partir de `clients` + `workouts`.
+- **El dashboard (`(tabs)/dashboard.tsx`) tiene el rediseño visual aplicado pero sigue con
+  datos 100% mock** (`DashboardGateway` mock + `dashboardData.mock.ts`): banner de próxima
+  sesión, "Resumen" con toggle Semana/Mes y deltas, accesos rápidos (a `clients/routines/nutrition`
+  `new`), "Hoy" con filas expandibles y feed de "Actividad reciente" con filtro por tipo. Las
+  métricas por periodo, el feed y las sesiones **no derivan de datos reales** — el swap a
+  `clients` + `workouts` queda para la Fase 9. Guía visual: canvas de Claude Design
+  (`https://claude.ai/code/artifact/9d4e9de6-0c1a-47e9-859a-02af918f3eda`, artboard "Rediseño").
 - El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho (ancho de la
   etiqueta, sigue pendiente). **Corregido en cambio**: el recorte vertical de las
   etiquetas de los 5 tabs (se veían cortadas a la mitad o directamente invisibles) —
@@ -214,7 +218,8 @@ pantalla a su formulario.
   (fórmula de **Epley**, `react-native-gifted-charts` ya instalado), PRs de carga/volumen/1RM e
   historial. La card **"Adherencia"** del perfil pasa a ser `TrainingSummaryCard` con datos
   reales (sesiones del mes + racha de semanas + última sesión).
-  **Decisiones:** (1) el **dashboard se deja para una fase posterior** — sigue con seed estático;
+  **Decisiones:** (1) el **dashboard se deja para una fase posterior** — desde entonces se le
+  aplicó el **rediseño visual** (ver "Deuda técnica"), pero la conexión a datos reales sigue aplazada;
   (2) adherencia = **resumen simple**, sin porcentaje (no hay agenda real de sesiones esperadas);
   (3) **pesos enteros** (mismo precedente que `BodyMeasurement.weightKg` y que `suggestedLoad`,
   que ya es texto libre). **Limitación conocida del mock:** si una rutina asignada fue eliminada
@@ -442,7 +447,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
 5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
-7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Dashboard aplazado.
+7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Rediseño visual del dashboard aplicado después (datos aún mock); conexión a datos reales aplazada a Fase 9.
 8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).
 9. **Fase 9** — Conectar todos los Gateways a datos reales (esquema BD, permisos, migraciones).
 10. **Fase 10** — Facturación.

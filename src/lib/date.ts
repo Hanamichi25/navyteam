@@ -41,3 +41,15 @@ export function todayDdMmAaaa(): string {
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   return `${dd}/${mm}/${today.getFullYear()}`;
 }
+
+const DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES_CORTOS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/** Etiqueta corta de la fecha de hoy en español (ej: "lun 1 sep"). Sin depender de `Intl`. */
+export function todayShortLabel(): string {
+  const today = new Date();
+  return `${DIAS_CORTOS[today.getDay()]} ${today.getDate()} ${MESES_CORTOS[today.getMonth()]}`;
+}
