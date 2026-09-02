@@ -79,7 +79,7 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
   sesión, "Resumen" con toggle Semana/Mes y deltas, accesos rápidos (a `clients/routines/nutrition`
   `new`), "Hoy" con filas expandibles y feed de "Actividad reciente" con filtro por tipo. Las
   métricas por periodo, el feed y las sesiones **no derivan de datos reales** — el swap a
-  `clients` + `workouts` queda para la Fase 9. Guía visual: canvas de Claude Design
+  `clients` + `workouts` queda para la Fase 10. Guía visual: canvas de Claude Design
   (`https://claude.ai/code/artifact/9d4e9de6-0c1a-47e9-859a-02af918f3eda`, artboard "Rediseño").
 - El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho (ancho de la
   etiqueta, sigue pendiente). **Corregido en cambio**: el recorte vertical de las
@@ -94,14 +94,26 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
 
 ## Reordenamiento del roadmap (decidido)
 
-El **backend real de auth se movió al final** (antes Fase 3, ahora Fase 8). Con el patrón
+El **backend real de auth se movió al final** (antes Fase 3, ahora Fase 9). Con el patrón
 Gateway, cada módulo habla con una interfaz; da igual si detrás hay un mock o un backend real,
 así que conviene construir toda la funcionalidad con mocks primero y hacer el swap de backend
 casi al final.
 
+**La vista de cliente entra en el plan (2026-09-02).** Antes estaba en "Futuro"; ahora es la
+**Fase 8** (con mocks, antes del backend). Decisiones:
+- **Misma app, rutas por rol** (no una 2ª app): `User.role: 'coach' | 'client'`. Al iniciar
+  sesión, `app/index.tsx` enruta a la experiencia de entrenador (Drawer + Tabs actual) o a la
+  de cliente (shell propio, más simple). Reutiliza features, tipos y Gateways. La extracción a
+  app aparte sigue siendo parte del futuro monorepo.
+- **El cliente registra sus propias series (reps/pesos)** desde su vista. El entrenador lo
+  sigue pudiendo hacer desde el panel (Fase 7). Ambos escriben `WorkoutSession` con `clientId`
+  → el mismo `WorkoutsGateway`, la misma forma de datos.
+- El cliente **ve** (solo lectura) su rutina asignada y su plan de alimentación asignado.
+- Cross-user real (lo que registra el cliente aparece en el panel del entrenador en otro
+  dispositivo) **no** funciona con los mocks de AsyncStorage — eso llega con datos reales
+  (Fase 10). Con mocks se demuestra en un mismo dispositivo cambiando de sesión.
+
 **Decisiones tomadas para las fases de CRUD:**
-- El **registro de entrenamientos (reps/pesos) lo hace el entrenador** desde el panel. No hay
-  app ni login de cliente todavía (eso queda para "Futuro").
 - Los **planes de alimentación son solo objetivo**: kcal/día + macros (P/C/G) + notas de texto
   libre. Sin catálogo de alimentos.
 - Los **Gateways mock persisten en el dispositivo** con `@react-native-async-storage/async-storage`
@@ -154,7 +166,7 @@ pantalla a su formulario.
   Asignar/desasignar rutina a un cliente se hace desde su perfil (tab Rutinas → "+ Asignar rutina"
   → elegir rutina + días) vía `ClientsGateway.assignRoutine`/`unassignRoutine`, que guardan un
   snapshot denormalizado en `ClientDetail.assignedRoutines` (no sincroniza `assignedCount` del
-  catálogo — limitación conocida del mock, se resuelve con backend real en Fase 9).
+  catálogo — limitación conocida del mock, se resuelve con backend real en Fase 10).
   - **Bug encontrado y corregido de paso**: `Alert.alert` de React Native es un no-op en
     react-native-web (sin callbacks ni botones), así que ninguna confirmación —incluido el logout
     de `AppDrawerContent`, que ya lo usaba desde la Fase 2— funcionaba en la versión web. Se
@@ -223,13 +235,49 @@ pantalla a su formulario.
   (2) adherencia = **resumen simple**, sin porcentaje (no hay agenda real de sesiones esperadas);
   (3) **pesos enteros** (mismo precedente que `BodyMeasurement.weightKg` y que `suggestedLoad`,
   que ya es texto libre). **Limitación conocida del mock:** si una rutina asignada fue eliminada
-  del catálogo, `RoutinesGateway.get()` lanza y no se puede loguear contra ella (FK reales en Fase 9).
+  del catálogo, `RoutinesGateway.get()` lanza y no se puede loguear contra ella (FK reales en Fase 10).
 
 ---
 
-## Fase 8 — Backend real de autenticación
+## Fase 8 — Vista de cliente (con mocks)
+
+Que el **cliente** (el "Usuario" del entrenador) tenga su propia experiencia en la misma app:
+ver lo que le han asignado y registrar sus entrenos. **Sin backend real** — Gateways mock.
+
+**Alcance:**
+1. **Rol en el dominio de auth**: `User.role` pasa de `'coach'` a `'coach' | 'client'`. El
+   mock de auth (`users.mock.ts`) gana al menos una credencial de cliente, ligada a un
+   `clientId` del seed de `clients` (ej: `cli_luis`).
+2. **Enrutado por rol**: `app/index.tsx` (o un guard en `(app)/_layout.tsx`) manda a los
+   `coach` a la experiencia actual (Drawer + Tabs) y a los `client` a un **shell propio**
+   más simple — probablemente Tabs de 3: **Mi rutina · Mi alimentación · Mis entrenos**
+   (nombres a confirmar al construir). Nueva carpeta de rutas para el área de cliente
+   (`app/(app)/(client)/…`); la de entrenador se mantiene.
+3. **Mi rutina** (solo lectura): la rutina asignada al cliente y sus bloques
+   (`ClientsGateway` para el snapshot + `RoutinesGateway.get()` para los bloques, igual que
+   hace `SessionLoggerForm`).
+4. **Mi alimentación** (solo lectura): el plan asignado (kcal/día + macros + notas).
+5. **Mis entrenos**: el cliente registra sus propias series (reps + peso, RPE opcional).
+   Reutiliza el flujo de la Fase 7 (`SessionLoggerForm` / grilla editable por ejercicio) pero
+   con el `clientId` fijado al del usuario en sesión — escribe `WorkoutSession` vía el mismo
+   `WorkoutsGateway.create()`. Historial + detalle de sus sesiones (solo lectura o con editar,
+   a confirmar).
+6. **Lado entrenador**: ya consume esas sesiones (pestaña "Entrenos" del perfil, progreso,
+   `TrainingSummaryCard`). Solo hay que verificar que lo que registra el cliente aparece ahí.
+
+**Límite conocido del mock:** con AsyncStorage la data es local al dispositivo, así que
+"cliente registra → entrenador lo ve" solo se demuestra en un mismo dispositivo cambiando de
+sesión. El cross-user real llega con la Fase 10.
+
+**No hacer salvo que se pida:** chat cliente–entrenador, notificaciones, que el cliente edite
+rutinas/planes, onboarding de cliente, registro de peso/mediciones por el cliente.
+
+---
+
+## Fase 9 — Backend real de autenticación (multi-rol)
 
 Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz que consume la UI.
+Ahora con **dos roles**: entrenador y cliente.
 
 **Alcance:**
 1. **Decidir el proveedor de backend PRIMERO** (ver "Decisión de backend" abajo). No escribir
@@ -237,20 +285,24 @@ Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz q
 2. `src/features/auth/gateway.ts` → interfaz `AuthGateway` (`signIn`, `signOut`, `getSession`, `refresh`).
    El mock actual pasa a ser `mockAuthGateway`. La implementación real
    (`supabaseAuthGateway` / `cognitoAuthGateway` / …) se inyecta desde `app/_layout.tsx`.
+   La sesión expone el **rol** (`coach` | `client`) y, para clientes, su `clientId`.
 3. `authStore` recibe el `AuthGateway` por inyección, no lo importa.
 4. **Persistencia de sesión** con `expo-secure-store` (access token en memoria, refresh en secure-store).
 5. Manejo de **expiración y refresh** de sesión.
 
-**No hacer salvo que se pida:** registro, recuperación de contraseña, biometría, OAuth social.
+**No hacer salvo que se pida:** registro self-service, recuperación de contraseña, biometría,
+OAuth social. (Alta de clientes: la hace el entrenador desde el panel, como ahora.)
 
 ---
 
-## Fase 9 — Conectar todos los Gateways a datos reales
+## Fase 10 — Conectar todos los Gateways a datos reales
 
 Con el proveedor elegido y `AuthGateway` real en marcha, migrar cada `*Gateway` mock a su
 implementación real: esquema de BD (clientes, medidas, ejercicios, rutinas, planes, sesiones,
-series), permisos/RLS, migraciones. Los mocks quedan como implementación de referencia para
-tests y desarrollo offline.
+series), migraciones, y **permisos por rol**: un `client` solo lee/escribe **sus** datos
+(sus sesiones, su rutina/plan asignados); un `coach` accede a **sus** clientes y a todo lo que
+crea. Aquí es donde "cliente registra → entrenador lo ve" funciona de verdad entre dispositivos.
+Los mocks quedan como implementación de referencia para tests y desarrollo offline.
 
 ---
 
@@ -260,10 +312,10 @@ Aún **no está decidido**. Candidatos:
 
 | Opción | A favor | En contra |
 |---|---|---|
-| **Supabase** | Postgres + Auth + Storage + RLS + Realtime; camino más corto desde los mocks; coincide con la spec del repo; portable (es Postgres estándar) | SaaS gestionado |
-| **AWS serverless** | Control y escala; encaja si el equipo ya vive en AWS. Stack: API Gateway + Lambda + Aurora Serverless v2 / DynamoDB + Cognito + S3, o Amplify Gen 2 | Más piezas de infra; Cognito incómodo; más lento al MVP |
+| **Supabase** | Postgres + Auth + Storage + RLS + Realtime; camino más corto desde los mocks; coincide con la spec del repo; portable (es Postgres estándar). **La RLS por rol (cliente ve solo lo suyo, entrenador ve sus clientes) sale casi gratis** — factor que pesa desde que la vista de cliente entró al plan | SaaS gestionado |
+| **AWS serverless** | Control y escala; encaja si el equipo ya vive en AWS. Stack: API Gateway + Lambda + Aurora Serverless v2 / DynamoDB + Cognito + S3, o Amplify Gen 2 | Más piezas de infra; Cognito incómodo; la autorización por rol hay que construirla a mano; más lento al MVP |
 
-**Regla:** al arrancar la Fase 8, confirmar con el usuario qué proveedor se usa antes de instalar
+**Regla:** al arrancar la Fase 9, confirmar con el usuario qué proveedor se usa antes de instalar
 dependencias. Independientemente del proveedor, el código se escribe contra las interfaces `Gateway`,
 nunca contra el SDK del proveedor directamente en la UI o el store.
 
@@ -310,7 +362,7 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   (1RM estimado) del seguimiento de entrenamientos (Fase 7).
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
 
-**Previsto para Fase 8+ (instalar cuando toque, con confirmación):**
+**Previsto para Fase 9+ (instalar cuando toque, con confirmación):**
 - `expo-secure-store` — tokens
 - SDK del proveedor de backend elegido (`@supabase/supabase-js` u equivalente)
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
@@ -320,6 +372,10 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 ---
 
 ## Estructura de carpetas
+
+> **Fase 8** parte `(app)/` por rol: el área actual pasa a ser la del entrenador y se añade
+> `(app)/(client)/…` para la vista de cliente; `app/index.tsx` enruta según `User.role`.
+> El árbol de abajo refleja el estado **pre-Fase-8**.
 
 ```
 app/                          # Expo Router (rutas = pantallas)
@@ -447,8 +503,9 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
 5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
-7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Rediseño visual del dashboard aplicado después (datos aún mock); conexión a datos reales aplazada a Fase 9.
-8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).
-9. **Fase 9** — Conectar todos los Gateways a datos reales (esquema BD, permisos, migraciones).
-10. **Fase 10** — Facturación.
-11. **Futuro** — Monorepo + extracción de módulos; vista/login de **cliente** (que el cliente registre sus propios entrenos); offline-first; notificaciones; EAS Build + tiendas.
+7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Rediseño visual del dashboard aplicado después (datos aún mock); conexión a datos reales aplazada a Fase 10.
+8. **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
+9. **Fase 9** — Backend real de autenticación **multi-rol** (Gateway + proveedor + secure-store + refresh).
+10. **Fase 10** — Conectar todos los Gateways a datos reales (esquema BD, migraciones, **permisos por rol** — cliente ve solo lo suyo).
+11. **Fase 11** — Facturación.
+12. **Futuro** — Monorepo + extracción de módulos; offline-first; notificaciones (recordatorio de sesión, cliente registró entreno); chat cliente–entrenador; EAS Build + tiendas.
