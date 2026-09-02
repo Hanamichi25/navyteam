@@ -10,6 +10,8 @@ import type { NutritionGateway } from '@/features/nutrition/gateway';
 import { createMockNutritionGateway } from '@/features/nutrition/mocks/nutritionGateway.mock';
 import type { RoutinesGateway } from '@/features/routines/gateway';
 import { createMockRoutinesGateway } from '@/features/routines/mocks/routinesGateway.mock';
+import type { WorkoutsGateway } from '@/features/workouts/gateway';
+import { createMockWorkoutsGateway } from '@/features/workouts/mocks/workoutsGateway.mock';
 
 /**
  * Contexto agregado que inyecta la implementación de cada Gateway. Hoy son
@@ -22,6 +24,7 @@ interface Gateways {
   nutrition: NutritionGateway;
   dashboard: DashboardGateway;
   exercises: ExercisesGateway;
+  workouts: WorkoutsGateway;
 }
 
 const GatewaysContext = createContext<Gateways | null>(null);
@@ -34,6 +37,7 @@ export function GatewaysProvider({ children }: { children: ReactNode }): React.J
       nutrition: createMockNutritionGateway(),
       dashboard: createMockDashboardGateway(),
       exercises: createMockExercisesGateway(),
+      workouts: createMockWorkoutsGateway(),
     }),
     [],
   );
@@ -67,4 +71,8 @@ export function useDashboardGateway(): DashboardGateway {
 
 export function useExercisesGateway(): ExercisesGateway {
   return useGateways().exercises;
+}
+
+export function useWorkoutsGateway(): WorkoutsGateway {
+  return useGateways().workouts;
 }

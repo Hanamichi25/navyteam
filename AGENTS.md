@@ -74,6 +74,9 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
   → los formularios de alta/edición son **Fase 5**.
 - Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
 - Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
+- **El dashboard (`(tabs)/dashboard.tsx`) sigue con seed 100% estático** (`dashboardData.mock.ts`):
+  stats, actividad reciente y próximas sesiones no derivan de datos reales. Aplazado en la Fase 7
+  (decisión con el usuario); conectar en una fase posterior a partir de `clients` + `workouts`.
 - El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho (ancho de la
   etiqueta, sigue pendiente). **Corregido en cambio**: el recorte vertical de las
   etiquetas de los 5 tabs (se veían cortadas a la mitad o directamente invisibles) —
@@ -194,12 +197,28 @@ pantalla a su formulario.
   react-native-web no los reconoce. Es ruido de consola solo en dev, no afecta el render ni la
   interacción — no se intentó suprimir (fragilidad de parchear una librería externa por un
   problema puramente cosmético).
-- **Fase 7 — Registro de entrenamientos + seguimiento.** Modelo: `WorkoutSession`
-  (cliente + rutina + fecha) → `ExerciseLog` por ejercicio → `SetLog` (nº serie, reps, peso, RPE
-  opcional). Flujo desde el perfil del cliente, lo hace **el entrenador**: "Registrar sesión" →
-  rutina asignada → series por ejercicio → guardar. Historial de sesiones. **Progreso por
-  ejercicio**: progresión de carga (gráfica), volumen, PRs. Dashboard y perfil del cliente pasan
-  a mostrar métricas reales derivadas del logging.
+- ✅ **Fase 7 — Registro de entrenamientos + seguimiento.** Nueva feature `workouts`
+  (`src/features/workouts/`, mismo precedente que `exercises`): `WorkoutSession`
+  (cliente + rutina + fecha + notas) → `ExerciseLog` por ejercicio → `SetLog` (nº serie, reps,
+  peso, RPE opcional). Patrón Gateway + mock persistido en AsyncStorage (`@navyteam/workouts`,
+  seed en `workouts.mock.ts`). La lógica de derivación vive en `src/features/workouts/progress.ts`
+  (funciones puras, sin I/O): resumen de sesión, progreso por ejercicio, ejercicios entrenados,
+  resumen de adherencia — el mock del gateway las llama y una implementación real las reusaría.
+  **Flujo (lo hace el entrenador desde el perfil del cliente):** pestaña **"Entrenos"** →
+  "+ Registrar sesión" (`clients/[id]/log-session.tsx`, modal) → `SessionLoggerForm` elige una
+  rutina **asignada** al cliente, trae sus bloques vía `RoutinesGateway.get()` (el snapshot
+  `AssignedRoutine` no los tiene) y prellena una grilla de series editable por ejercicio (reps =
+  punto medio del rango de la rutina, peso = primer número de `suggestedLoad`) → guardar.
+  Historial de sesiones + detalle de solo lectura con eliminar (`clients/[id]/session/[sessionId].tsx`).
+  **Progreso por ejercicio** (`clients/[id]/progress/[exerciseId].tsx`): gráfica de 1RM estimado
+  (fórmula de **Epley**, `react-native-gifted-charts` ya instalado), PRs de carga/volumen/1RM e
+  historial. La card **"Adherencia"** del perfil pasa a ser `TrainingSummaryCard` con datos
+  reales (sesiones del mes + racha de semanas + última sesión).
+  **Decisiones:** (1) el **dashboard se deja para una fase posterior** — sigue con seed estático;
+  (2) adherencia = **resumen simple**, sin porcentaje (no hay agenda real de sesiones esperadas);
+  (3) **pesos enteros** (mismo precedente que `BodyMeasurement.weightKg` y que `suggestedLoad`,
+  que ya es texto libre). **Limitación conocida del mock:** si una rutina asignada fue eliminada
+  del catálogo, `RoutinesGateway.get()` lanza y no se puede loguear contra ella (FK reales en Fase 9).
 
 ---
 
@@ -282,16 +301,14 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   (persistencia de los Gateways mock)
 - `react-native-gifted-charts` + `react-native-svg` (peer obligatorio) + `expo-linear-gradient`
   (peer que el paquete resuelve de forma no perezosa al importar, aunque no se usen gradientes —
-  ver Fase 6) — gráfica de evolución de peso del perfil de cliente.
+  ver Fase 6) — gráfica de evolución de peso del perfil de cliente y de progresión de carga
+  (1RM estimado) del seguimiento de entrenamientos (Fase 7).
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
 
 **Previsto para Fase 8+ (instalar cuando toque, con confirmación):**
 - `expo-secure-store` — tokens
 - SDK del proveedor de backend elegido (`@supabase/supabase-js` u equivalente)
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
-
-**Posible en fases de CRUD (confirmar):** librería de gráficas para la progresión de carga en
-Fase 7 (mismo `react-native-gifted-charts` ya instalado, o SVG a mano).
 
 **No agregar librerías fuera de lo previsto sin explicar por qué y confirmar.**
 
@@ -314,7 +331,9 @@ app/                          # Expo Router (rutas = pantallas)
       clients/                # tab Usuarios → _layout.tsx (Stack) + index.tsx (lista) +
                                #   new.tsx (modal) + [id]/index.tsx (perfil) +
                                #   [id]/edit.tsx (push) + [id]/assign-routine.tsx,
-                               #   [id]/assign-plan.tsx, [id]/add-measurement.tsx (modales)
+                               #   [id]/assign-plan.tsx, [id]/add-measurement.tsx,
+                               #   [id]/log-session.tsx (modales) +
+                               #   [id]/session/[sessionId].tsx, [id]/progress/[exerciseId].tsx (push)
       routines/               # tab Rutinas → _layout.tsx (Stack) + index.tsx (lista) +
                                #   new.tsx (modal) + [id].tsx (editor, push normal)
       nutrition/              # tab Alimentación → _layout.tsx (Stack) + index.tsx (lista) + new.tsx (modal)
@@ -338,6 +357,7 @@ src/
     routines/                 # catálogo de rutinas + editor con bloques de ejercicio
     nutrition/                # catálogo de planes de alimentación
     exercises/                # catálogo de ejercicios (usado por el editor de rutinas)
+    workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura)
     <feature>/
       index.ts                # API pública del módulo (ÚNICA puerta de entrada)
       gateway.ts               # interfaz(es) de infra que el módulo necesita
@@ -347,7 +367,7 @@ src/
       store/
       mocks/                  # *.mock.ts (datos semilla) + <x>Gateway.mock.ts (implementación
                                # mock persistida en AsyncStorage)
-  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition, exercise)
+  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition, exercise, workout)
 ```
 
 ---
@@ -422,7 +442,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 4. ✅ **Fase 4** — Catálogo de **Ejercicios** + **CRUD de Rutinas** (editor con bloques de ejercicio, asignación a clientes).
 5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
-7. **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso.
+7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Dashboard aplazado.
 8. **Fase 8** — Backend real de autenticación (Gateway + proveedor + secure-store + refresh).
 9. **Fase 9** — Conectar todos los Gateways a datos reales (esquema BD, permisos, migraciones).
 10. **Fase 10** — Facturación.

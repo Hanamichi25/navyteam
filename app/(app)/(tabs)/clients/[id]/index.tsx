@@ -20,13 +20,21 @@ import {
   WeightEvolutionChart,
   WeightProgressCard,
 } from '@/features/clients';
+import {
+  SessionSummaryRow,
+  TrainedExerciseRow,
+  TrainingSummaryCard,
+  useClientWorkouts,
+  useTrainedExercises,
+} from '@/features/workouts';
 import { computeAge } from '@/lib/date';
 
-type ProfileTab = 'routines' | 'nutrition' | 'messages';
+type ProfileTab = 'routines' | 'nutrition' | 'workouts' | 'messages';
 
 const TABS: readonly { value: ProfileTab; label: string }[] = [
   { value: 'routines', label: 'Rutinas' },
-  { value: 'nutrition', label: 'Alimentación' },
+  { value: 'nutrition', label: 'Nutrición' },
+  { value: 'workouts', label: 'Entrenos' },
   { value: 'messages', label: 'Mensajes' },
 ];
 
@@ -36,6 +44,8 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const client = useClient(id);
   const unassignRoutine = useUnassignRoutineFromClient();
   const unassignPlan = useUnassignPlanFromClient();
+  const workouts = useClientWorkouts(id);
+  const trainedExercises = useTrainedExercises(id);
   const [tab, setTab] = useState<ProfileTab>('routines');
 
   return (
@@ -100,13 +110,7 @@ export default function ClientProfileScreen(): React.JSX.Element {
 
             <MeasurementHistoryList measurements={client.data.measurements} />
 
-            <View className="gap-1 rounded-2xl border border-line bg-surface-subtle p-4">
-              <Text className="text-sm font-bold text-ink">Adherencia</Text>
-              <Text className="text-xs text-ink-muted">
-                Se calculará automáticamente cuando exista el registro de entrenamientos
-                (Fase 7).
-              </Text>
-            </View>
+            <TrainingSummaryCard clientId={id} />
 
             <View className="flex-row rounded-2xl bg-surface-field p-1">
               {TABS.map((item) => {
@@ -115,7 +119,8 @@ export default function ClientProfileScreen(): React.JSX.Element {
                   <Text
                     key={item.value}
                     onPress={() => setTab(item.value)}
-                    className={`flex-1 rounded-xl py-2 text-center text-sm font-semibold ${
+                    numberOfLines={1}
+                    className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold ${
                       active ? 'bg-surface text-primary' : 'text-ink-muted'
                     }`}
                   >
@@ -184,6 +189,54 @@ export default function ClientProfileScreen(): React.JSX.Element {
                     <Text className="text-sm font-semibold text-primary">+ Asignar plan</Text>
                   </Pressable>
                 )}
+              </View>
+            ) : null}
+
+            {tab === 'workouts' ? (
+              <View className="gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/(app)/(tabs)/clients/${id}/log-session`)}
+                  className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+                >
+                  <Text className="text-sm font-semibold text-primary">+ Registrar sesión</Text>
+                </Pressable>
+
+                <Text className="mt-1 text-sm font-bold text-ink">Historial</Text>
+                {workouts.status === 'loading' ? (
+                  <Text className="text-sm text-ink-faint">Cargando…</Text>
+                ) : workouts.status === 'error' ? (
+                  <Text className="text-sm text-red-500">{workouts.error}</Text>
+                ) : workouts.data.length === 0 ? (
+                  <Text className="text-sm text-ink-muted">Sin sesiones registradas.</Text>
+                ) : (
+                  workouts.data.map((summary) => (
+                    <SessionSummaryRow
+                      key={summary.id}
+                      summary={summary}
+                      onPress={() =>
+                        router.push(`/(app)/(tabs)/clients/${id}/session/${summary.id}`)
+                      }
+                    />
+                  ))
+                )}
+
+                {trainedExercises.status === 'ready' && trainedExercises.data.length > 0 ? (
+                  <>
+                    <Text className="mt-2 text-sm font-bold text-ink">Progreso por ejercicio</Text>
+                    {trainedExercises.data.map((summary) => (
+                      <TrainedExerciseRow
+                        key={summary.exerciseId}
+                        summary={summary}
+                        onPress={() =>
+                          router.push(
+                            `/(app)/(tabs)/clients/${id}/progress/${summary.exerciseId}?name=${encodeURIComponent(summary.exerciseName)}`,
+                          )
+                        }
+                      />
+                    ))}
+                  </>
+                ) : null}
               </View>
             ) : null}
 

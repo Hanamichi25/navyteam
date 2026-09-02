@@ -1,0 +1,15 @@
+export { ExerciseProgressChart } from './components/ExerciseProgressChart';
+export { SessionLoggerForm } from './components/SessionLoggerForm';
+export { SessionSummaryRow } from './components/SessionSummaryRow';
+export { TrainedExerciseRow } from './components/TrainedExerciseRow';
+export { TrainingSummaryCard } from './components/TrainingSummaryCard';
+export type { WorkoutsGateway } from './gateway';
+export {
+  useClientTrainingSummary,
+  useClientWorkouts,
+  useCreateWorkoutSession,
+  useExerciseProgress,
+  useRemoveWorkoutSession,
+  useTrainedExercises,
+  useWorkoutSession,
+} from './hooks/useWorkouts';

@@ -17,10 +17,14 @@ export function useRoutines(): AsyncState<Routine[]> {
 }
 
 /** Carga el detalle de una rutina por id (incluye sus bloques de ejercicio). */
-export function useRoutine(id: string): AsyncState<RoutineDetail> {
+export function useRoutine(id: string, enabled = true): AsyncState<RoutineDetail> {
   const gateway = useRoutinesGateway();
   return toAsyncState(
-    useQuery({ queryKey: routineKey(id), queryFn: () => gateway.get(id) }),
+    useQuery({
+      queryKey: routineKey(id),
+      queryFn: () => gateway.get(id),
+      enabled: enabled && id !== '',
+    }),
     'No se pudo cargar la rutina',
   );
 }
