@@ -12,6 +12,8 @@ interface AssignedRoutineViewProps {
   schedule?: string;
   /** Nombre denormalizado, para mostrar algo mientras carga el detalle. */
   fallbackName?: string;
+  /** Oculta la cabecera (nombre + horario) — útil cuando el contenedor ya la muestra. */
+  hideHeader?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ export function AssignedRoutineView({
   routineId,
   schedule,
   fallbackName,
+  hideHeader = false,
 }: AssignedRoutineViewProps): React.JSX.Element {
   const routine = useRoutine(routineId);
   const exercises = useExercises();
@@ -40,12 +43,14 @@ export function AssignedRoutineView({
 
   return (
     <View className="gap-3">
-      <View>
-        <Text className="text-lg font-bold text-ink">{name}</Text>
-        {schedule ? (
-          <Text className="mt-0.5 text-sm text-ink-muted">{schedule}</Text>
-        ) : null}
-      </View>
+      {hideHeader ? null : (
+        <View>
+          <Text className="text-lg font-bold text-ink">{name}</Text>
+          {schedule ? (
+            <Text className="mt-0.5 text-sm text-ink-muted">{schedule}</Text>
+          ) : null}
+        </View>
+      )}
 
       {routine.status === 'loading' ? (
         <Text className="text-sm text-ink-faint">Cargando rutina…</Text>

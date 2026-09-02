@@ -263,12 +263,29 @@ El **cliente** tiene su propia experiencia en la misma app (misma sesión mock, 
    `emptyMessage` para el texto según rol) → `WorkoutsGateway.create()`. Detalle de sesión
    solo lectura vía `SessionDetailView` (nuevo, extraído de `session/[sessionId].tsx` del
    entrenador, que ahora también lo usa). **El cliente NO puede borrar sus sesiones.**
-6. **Cuenta** (`(client)/account.tsx`): identidad + cerrar sesión (con `confirm()`).
+6. **Cuenta** (`(client)/account.tsx`): identidad + objetivo + "miembro desde" + cerrar sesión (con `confirm()`).
 7. `useClient(id, enabled?)` gana el flag `enabled` (como `useRoutine`).
 
-**Verificado en la app** (Expo web): login de cliente → 4 tabs; Mi rutina/Mi alimentación
-pintan lo asignado; registrar sesión persiste y aparece en el historial; login de entrenador
-sigue yendo al panel; el entrenador ve en el perfil de Luis la sesión que registró el cliente.
+**Rediseño visual de las 4 pantallas** (después, misma fase). Guía: canvas de Claude Design
+`https://claude.ai/code/artifact/f7760422-8d44-4edc-8d5c-741f74338aae` (artboard "Rediseño").
+Cambios:
+- **`DateStrip`** (`src/components/`): tira "Miércoles 2 · septiembre" en la cabecera de las 4 tabs.
+  Helpers nuevos: `src/lib/date.ts#{weekdayIndexMonday,weekdayNameEs,todayLongLabel,WEEKDAY_LETTERS,WEEKDAYS_ES}`.
+- **`src/lib/schedule.ts`** (nuevo): `parseSchedule`/`scheduleTrainsOn`/`nextTrainingWeekday` —
+  parsea los horarios `"Lun/Mié/Vie"` de `AssignedRoutine.schedule` a índices lunes=0.
+- **Mi rutina**: `TodayRoutineCard` ("Hoy te toca" — rutina del día o "Hoy descansas" +
+  próximo entreno, ejercicios plegables) + `WeekScheduleStrip` (7 pills marcando días de
+  entreno y hoy). Debajo, las rutinas asignadas en tarjetas plegables (`AssignedRoutineView`
+  gana `hideHeader`). Ya no lista todo expandido de entrada.
+- **Alimentación**: `NutritionPlanDetail` reescrito — card grande de kcal, macros en **gramos**
+  (derivados de kcal + %) además del %, y notas.
+- **Mis entrenos**: `TrainingSummaryCard` reutilizado (nuevos props `title`/`emptyHint`) arriba
+  del historial; botón "Registrar sesión" → `Fab` (`+`).
+
+**Verificado en la app** (Expo web): login de cliente → 4 tabs con el rediseño; "Hoy te toca"
+resuelve la rutina del día; "Ver ejercicios" despliega; registrar sesión persiste y aparece en
+el historial y en "Tu constancia"; login de entrenador sigue yendo al panel; el entrenador ve
+en el perfil de Luis la sesión que registró el cliente.
 
 **Límite conocido del mock:** con AsyncStorage la data es local al dispositivo → "cliente
 registra → entrenador lo ve" solo se demuestra en un mismo dispositivo cambiando de sesión.
@@ -418,7 +435,7 @@ src/
   components/                 # UI compartida y agnóstica (Button, Input, TextField, SelectField,
                                # NumberField, DateField, Card, Badge, Avatar, Fab...)
   gateways/                   # GatewaysProvider — inyecta la implementación de cada Gateway
-  lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer, date)
+  lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer, date, schedule)
   features/
     auth/                     # login + sesión (Zustand)
     dashboard/                # tab Inicio

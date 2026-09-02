@@ -2,10 +2,15 @@ import { Redirect, useRouter } from 'expo-router';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/Button';
+import { DateStrip } from '@/components/DateStrip';
+import { Fab } from '@/components/Fab';
 import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
-import { SessionSummaryRow, useClientWorkouts } from '@/features/workouts';
+import {
+  SessionSummaryRow,
+  TrainingSummaryCard,
+  useClientWorkouts,
+} from '@/features/workouts';
 
 export default function ClientWorkoutsScreen(): React.JSX.Element {
   const router = useRouter();
@@ -17,11 +22,11 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
     return <Redirect href="/(auth)/login" />;
   }
 
+  const goToLog = (): void => router.push('/(client)/workouts/log');
+
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
-      <View className="px-5 pb-2 pt-3">
-        <Text className="text-2xl font-extrabold text-ink">Mis entrenos</Text>
-      </View>
+      <DateStrip />
 
       {!clientId ? (
         <FeedbackState
@@ -32,38 +37,41 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
         <FeedbackState variant="loading" />
       ) : workouts.status === 'error' ? (
         <FeedbackState variant="error" message={workouts.error} />
-      ) : workouts.data.length === 0 ? (
-        <View className="flex-1">
-          <FeedbackState
-            variant="empty"
-            iconName="barbell-outline"
-            message="Todavía no has registrado ningún entreno. Pulsa el botón para registrar el primero."
-          />
-        </View>
       ) : (
-        <FlatList
-          data={workouts.data}
-          keyExtractor={(session) => session.id}
-          contentContainerClassName="gap-3 px-5 pb-4 pt-1"
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <SessionSummaryRow
-              summary={item}
-              onPress={() => router.push(`/(client)/workouts/${item.id}`)}
-            />
-          )}
-        />
-      )}
-
-      {clientId ? (
-        <View className="border-t border-line px-5 py-3">
-          <Button
-            label="Registrar sesión"
-            fullWidth
-            onPress={() => router.push('/(client)/workouts/log')}
+        <>
+          <FlatList
+            data={workouts.data}
+            keyExtractor={(session) => session.id}
+            contentContainerClassName="gap-3 px-5 pb-24 pt-4"
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View className="gap-4 pb-1">
+                <Text className="text-2xl font-extrabold text-ink">Mis entrenos</Text>
+                <TrainingSummaryCard
+                  clientId={clientId}
+                  title="Tu constancia"
+                  emptyHint="Todavía no has registrado ningún entreno. Pulsa el botón + para empezar."
+                />
+                {workouts.data.length > 0 ? (
+                  <Text className="text-sm font-bold text-ink">Historial</Text>
+                ) : null}
+              </View>
+            }
+            ListEmptyComponent={
+              <Text className="px-1 text-sm text-ink-muted">
+                Cuando registres un entreno aparecerá aquí.
+              </Text>
+            }
+            renderItem={({ item }) => (
+              <SessionSummaryRow
+                summary={item}
+                onPress={() => router.push(`/(client)/workouts/${item.id}`)}
+              />
+            )}
           />
-        </View>
-      ) : null}
+          <Fab accessibilityLabel="Registrar sesión" onPress={goToLog} />
+        </>
+      )}
     </SafeAreaView>
   );
 }

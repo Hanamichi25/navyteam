@@ -2,6 +2,7 @@ import { Redirect } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DateStrip } from '@/components/DateStrip';
 import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
 import { useClient } from '@/features/clients';
@@ -29,9 +30,7 @@ export default function ClientNutritionScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
-      <View className="px-5 pb-2 pt-3">
-        <Text className="text-2xl font-extrabold text-ink">Mi alimentación</Text>
-      </View>
+      <DateStrip />
 
       {!clientId ? (
         <FeedbackState
@@ -54,14 +53,14 @@ export default function ClientNutritionScreen(): React.JSX.Element {
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerClassName="gap-4 px-5 pb-8 pt-1"
+          contentContainerClassName="gap-4 px-5 pb-8 pt-4"
           showsVerticalScrollIndicator={false}
         >
           {fullPlan ? (
             <NutritionPlanDetail plan={fullPlan} />
           ) : (
             <View className="gap-1.5">
-              <Text className="text-lg font-bold text-ink">{assignedPlan.name}</Text>
+              <Text className="text-xl font-extrabold text-ink">{assignedPlan.name}</Text>
               <Text className="text-base font-semibold text-primary">
                 {assignedPlan.kcalPerDay} kcal/día
               </Text>

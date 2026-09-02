@@ -2,6 +2,8 @@ export { AssignedRoutineView } from './components/AssignedRoutineView';
 export { RoutineBlockList } from './components/RoutineBlockList';
 export { RoutineCard } from './components/RoutineCard';
 export { RoutineEditorForm } from './components/RoutineEditorForm';
+export { TodayRoutineCard } from './components/TodayRoutineCard';
+export { WeekScheduleStrip } from './components/WeekScheduleStrip';
 export type { RoutinesGateway } from './gateway';
 export {
   useCreateRoutine,

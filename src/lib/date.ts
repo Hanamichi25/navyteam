@@ -53,3 +53,34 @@ export function todayShortLabel(): string {
   const today = new Date();
   return `${DIAS_CORTOS[today.getDay()]} ${today.getDate()} ${MESES_CORTOS[today.getMonth()]}`;
 }
+
+/** Días de la semana con lunes = 0 … domingo = 6 (el orden que usan los horarios). */
+export const WEEKDAYS_ES = [
+  'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',
+] as const;
+
+/** Iniciales de los 7 días, lunes primero. */
+export const WEEKDAY_LETTERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
+
+const MESES_LARGOS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+/** Índice del día de la semana con lunes = 0 … domingo = 6. */
+export function weekdayIndexMonday(date: Date = new Date()): number {
+  return (date.getDay() + 6) % 7;
+}
+
+/** Nombre del día de la semana en español, lunes = 0 … domingo = 6. */
+export function weekdayNameEs(weekdayIndex: number): string {
+  return WEEKDAYS_ES[weekdayIndex] ?? WEEKDAYS_ES[0];
+}
+
+/** Etiqueta larga de la fecha de hoy en español (ej: "Miércoles 3 · septiembre"). */
+export function todayLongLabel(): string {
+  const d = new Date();
+  const dia = weekdayNameEs(weekdayIndexMonday(d));
+  const mes = MESES_LARGOS[d.getMonth()] ?? '';
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${d.getDate()} · ${mes}`;
+}

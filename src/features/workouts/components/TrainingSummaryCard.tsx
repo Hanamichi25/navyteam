@@ -4,6 +4,10 @@ import { useClientTrainingSummary } from '../hooks/useWorkouts';
 
 interface TrainingSummaryCardProps {
   clientId: string;
+  /** Título de la card. Por defecto "Adherencia" (vista del entrenador). */
+  title?: string;
+  /** Texto cuando no hay sesiones registradas. */
+  emptyHint?: string;
 }
 
 function Metric({ value, label }: { value: string; label: string }): React.JSX.Element {
@@ -20,22 +24,23 @@ function Metric({ value, label }: { value: string; label: string }): React.JSX.E
  * entrenamientos: sesiones del mes, racha de semanas y última sesión. Sin
  * porcentaje de adherencia (no hay agenda real de sesiones esperadas).
  */
-export function TrainingSummaryCard({ clientId }: TrainingSummaryCardProps): React.JSX.Element {
+export function TrainingSummaryCard({
+  clientId,
+  title = 'Adherencia',
+  emptyHint = 'Sin sesiones registradas todavía. Usa "+ Registrar sesión" en la pestaña Entrenos.',
+}: TrainingSummaryCardProps): React.JSX.Element {
   const summary = useClientTrainingSummary(clientId);
 
   return (
     <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
-      <Text className="text-sm font-bold text-ink">Adherencia</Text>
+      <Text className="text-sm font-bold text-ink">{title}</Text>
 
       {summary.status === 'loading' ? (
         <ActivityIndicator color="#2563EB" />
       ) : summary.status === 'error' ? (
         <Text className="text-xs text-ink-muted">{summary.error}</Text>
       ) : summary.data.totalSessions === 0 ? (
-        <Text className="text-xs text-ink-muted">
-          Sin sesiones registradas todavía. Usa &quot;+ Registrar sesión&quot; en la pestaña
-          Entrenos.
-        </Text>
+        <Text className="text-xs text-ink-muted">{emptyHint}</Text>
       ) : (
         <View className="flex-row">
           <Metric value={String(summary.data.sessionsThisMonth)} label="Sesiones este mes" />
