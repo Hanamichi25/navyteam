@@ -50,7 +50,8 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
                 <TrainingSummaryCard
                   clientId={clientId}
                   title="Tu constancia"
-                  emptyHint="Todavía no has registrado ningún entreno. Pulsa el botón + para empezar."
+                  emptyHint="Todavía no has registrado ningún entreno. Pulsa “Iniciar” en tu rutina de hoy, o el botón + de aquí."
+                  weekSessions={workouts.data}
                 />
                 {workouts.data.length > 0 ? (
                   <Text className="text-sm font-bold text-ink">Historial</Text>
@@ -65,6 +66,7 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
             renderItem={({ item }) => (
               <SessionSummaryRow
                 summary={item}
+                leadingDateBadge
                 onPress={() => router.push(`/(client)/workouts/${item.id}`)}
               />
             )}

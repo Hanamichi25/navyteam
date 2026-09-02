@@ -4,7 +4,7 @@
  * implementación real de servidor que quiera calcular lo mismo en cliente.
  */
 
-import { parseDdMmAaaa } from '@/lib/date';
+import { parseDdMmAaaa, weekdayIndexMonday } from '@/lib/date';
 import type {
   ClientTrainingSummary,
   ExerciseLog,
@@ -48,6 +48,7 @@ export function summarizeSession(session: WorkoutSession): WorkoutSessionSummary
     exerciseCount: session.exercises.length,
     setCount,
     totalVolumeKg: sessionVolumeKg(session),
+    ...(session.durationMin === undefined ? {} : { durationMin: session.durationMin }),
   };
 }
 
@@ -180,4 +181,22 @@ export function buildTrainingSummary(
     lastSessionDate: dated[0]?.session.date ?? null,
     currentStreakWeeks,
   };
+}
+
+/**
+ * Días de la semana en curso (lunes = 0 … domingo = 6) en los que hay al menos
+ * una sesión registrada. Sirve a la tira "tu semana" de la vista de cliente.
+ * Acepta cualquier cosa con un `date` en formato `dd/mm/aaaa` (sesión o resumen).
+ */
+export function weekdaysTrainedThisWeek(
+  items: readonly { date: string }[],
+  now: Date = new Date(),
+): number[] {
+  const thisWeek = weekIndex(now);
+  const days = new Set<number>();
+  for (const item of items) {
+    const date = parseDdMmAaaa(item.date);
+    if (date && weekIndex(date) === thisWeek) days.add(weekdayIndexMonday(date));
+  }
+  return [...days].sort((a, b) => a - b);
 }

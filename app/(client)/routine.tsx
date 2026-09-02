@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ function trainingDaysSentence(schedules: string[]): string {
 }
 
 export default function ClientRoutineScreen(): React.JSX.Element {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const clientId = user?.clientId ?? '';
   const client = useClient(clientId, clientId !== '');
@@ -67,7 +68,15 @@ export default function ClientRoutineScreen(): React.JSX.Element {
           contentContainerClassName="gap-6 px-5 pb-8 pt-4"
           showsVerticalScrollIndicator={false}
         >
-          <TodayRoutineCard assignedRoutines={routines} />
+          <TodayRoutineCard
+            assignedRoutines={routines}
+            onStartWorkout={(routineId) =>
+              router.push({
+                pathname: '/(client)/workouts/start',
+                params: { routineId },
+              })
+            }
+          />
 
           <View className="gap-2.5">
             <Text className="text-base font-bold text-ink">Tu semana</Text>

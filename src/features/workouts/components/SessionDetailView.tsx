@@ -14,7 +14,10 @@ export function SessionDetailView({
     <View className="gap-5">
       <View className="gap-1">
         <Text className="text-xl font-extrabold text-ink">{session.routineName}</Text>
-        <Text className="text-sm text-ink-faint">{session.date}</Text>
+        <Text className="text-sm text-ink-faint">
+          {session.date}
+          {session.durationMin ? ` · ${session.durationMin} min` : ''}
+        </Text>
       </View>
 
       {session.notes ? (

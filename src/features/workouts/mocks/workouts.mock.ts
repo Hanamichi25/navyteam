@@ -29,6 +29,7 @@ function legDay(
   squatRpe: number,
   lungeKg: number,
   notes?: string,
+  durationMin = 54,
 ): WorkoutSession {
   return {
     id,
@@ -36,6 +37,7 @@ function legDay(
     routineId: 'rtn_001',
     routineName: 'Piernas y Glúteos',
     date,
+    durationMin,
     ...(notes ? { notes } : {}),
     exercises: [
       { id: `${id}_squat`, exerciseId: 'exc_squat', exerciseName: 'Sentadilla', sets: sets(4, 8, squatKg, squatRpe) },
@@ -51,6 +53,7 @@ function upperDay(
   benchReps: number,
   rowKg: number,
   notes?: string,
+  durationMin = 47,
 ): WorkoutSession {
   return {
     id,
@@ -58,6 +61,7 @@ function upperDay(
     routineId: 'rtn_003',
     routineName: 'Fuerza Superior',
     date,
+    durationMin,
     ...(notes ? { notes } : {}),
     exercises: [
       { id: `${id}_bench`, exerciseId: 'exc_bench_press', exerciseName: 'Press de banca', sets: sets(4, benchReps, benchKg, 8) },
@@ -67,12 +71,12 @@ function upperDay(
 }
 
 export const WORKOUT_SESSIONS_SEED: readonly WorkoutSession[] = [
-  legDay('wko_maria_1', '25/07/2026', 40, 7, 12),
-  legDay('wko_maria_2', '08/08/2026', 42, 7, 12, 'Subió 2 kg en sentadilla sin problema.'),
-  legDay('wko_maria_3', '15/08/2026', 45, 8, 14),
-  legDay('wko_maria_4', '22/08/2026', 48, 8, 14),
-  legDay('wko_maria_5', '29/08/2026', 50, 9, 16, 'PR de sentadilla a 50 kg.'),
-  upperDay('wko_pedro_1', '20/07/2026', 60, 6, 50),
-  upperDay('wko_pedro_2', '10/08/2026', 62, 5, 52),
-  upperDay('wko_pedro_3', '27/08/2026', 67, 5, 55, 'PR de press de banca a 67 kg.'),
+  legDay('wko_maria_1', '25/07/2026', 40, 7, 12, undefined, 58),
+  legDay('wko_maria_2', '08/08/2026', 42, 7, 12, 'Subió 2 kg en sentadilla sin problema.', 52),
+  legDay('wko_maria_3', '15/08/2026', 45, 8, 14, undefined, 55),
+  legDay('wko_maria_4', '22/08/2026', 48, 8, 14, undefined, 51),
+  legDay('wko_maria_5', '29/08/2026', 50, 9, 16, 'PR de sentadilla a 50 kg.', 60),
+  upperDay('wko_pedro_1', '20/07/2026', 60, 6, 50, undefined, 49),
+  upperDay('wko_pedro_2', '10/08/2026', 62, 5, 52, undefined, 45),
+  upperDay('wko_pedro_3', '27/08/2026', 67, 5, 55, 'PR de press de banca a 67 kg.', 46),
 ];

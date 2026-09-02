@@ -287,6 +287,41 @@ resuelve la rutina del día; "Ver ejercicios" despliega; registrar sesión persi
 el historial y en "Tu constancia"; login de entrenador sigue yendo al panel; el entrenador ve
 en el perfil de Luis la sesión que registró el cliente.
 
+### Entreno en curso + rediseño de "Mis entrenos" (después, misma fase)
+
+Guía: canvas de Claude Design `https://claude.ai/code/artifact/3ad0d2e6-9dba-44c2-b17f-40297a30a67d`.
+
+- **`WorkoutSession.durationMin?`** (+ `WorkoutSessionInput`, `WorkoutSessionSummary`): duración
+  en minutos, entera y opcional. `summarizeSession`/`create()` la propagan; el seed de
+  `workouts.mock.ts` la trae en todas las sesiones. `SessionDetailView` y `SessionSummaryRow`
+  la muestran (`· 47 min`) cuando existe.
+- **`useStopwatch`** (`src/features/workouts/hooks/`): cronómetro con marcas de tiempo reales
+  (`Date.now()`, no suma de ticks) — `{ elapsedSec, running, toggle }` + `formatStopwatch()`.
+- **`src/features/workouts/logging.ts`** (nuevo): helpers puros extraídos de `SessionLoggerForm`
+  (`DraftSet`/`DraftExercise`, `draftsFromBlocks`, `toInputExercises`, `newSet`,
+  `parseLeadingWeight`) — ahora compartidos con `ActiveSessionForm`. `SetRow` exporta `SetCell`
+  y `toNumber`.
+- **`ActiveSessionForm`** + ruta `app/(client)/workouts/start.tsx` (modal, `gestureEnabled:false`,
+  `?routineId=`): entreno en curso. Cabecera con cronómetro (corre solo, se puede pausar),
+  barra de "series completadas", un card por ejercicio con objetivo y grilla editable
+  (`ActiveSetRow`: reps · kg · ✓ visual), "+ Serie". "Finalizar" → `create()` con
+  `durationMin = round(elapsedSec/60)` y `date = hoy`. "Salir" pide `confirm()`.
+- **`TodayRoutineCard`** gana `onStartWorkout?(routineId)` → botón sólido "▶ Iniciar entreno"
+  (uno por rutina de hoy); "Ver ejercicios" pasa a link de texto. `(client)/routine.tsx` pasa
+  la navegación a `/(client)/workouts/start`.
+- **Rediseño de `TrainingSummaryCard`**: 3 cifras equilibradas con divisores + fecha corta
+  (`monthDayShort` → "2 sep"); nuevo prop `weekSessions?` → tira de la semana (días entrenados,
+  vía `weekdaysTrainedThisWeek` en `progress.ts`). Solo la usa la vista de cliente.
+- **`SessionSummaryRow`** gana `leadingDateBadge?` (badge mes/día a la izquierda) — lo usa
+  `(client)/workouts/index.tsx`; la vista del entrenador queda igual.
+- **El FAB `+` de "Mis entrenos" sigue** abriendo `SessionLoggerForm` (registro manual de una
+  sesión ya hecha, con fecha); "Iniciar" es para entrenar en el momento con cronómetro.
+
+**Verificado** (Expo web): login cliente → "Iniciar entreno" abre el entreno en curso; el
+cronómetro avanza y se pausa; marcar series mueve la barra; "Finalizar" guarda la sesión con su
+duración y vuelve a "Mis entrenos" rediseñado (constancia equilibrada + tira de semana + badge
+de fecha + `· N min`). `typecheck` y `export:web` en verde.
+
 **Límite conocido del mock:** con AsyncStorage la data es local al dispositivo → "cliente
 registra → entrenador lo ve" solo se demuestra en un mismo dispositivo cambiando de sesión.
 El cross-user real llega con la Fase 10. La sesión mock **no se persiste** entre recargas
@@ -408,7 +443,8 @@ app/                          # Expo Router (rutas = pantallas)
   (client)/                   # área del CLIENTE (Fase 8). Guard de rol. Sin Drawer.
     _layout.tsx               # Tabs (Mi rutina, Alimentación, Mis entrenos, Cuenta)
     routine.tsx · nutrition.tsx · account.tsx
-    workouts/                 # _layout.tsx (Stack) + index.tsx + log.tsx (modal) + [sessionId].tsx
+    workouts/                 # _layout.tsx (Stack) + index.tsx + start.tsx (modal, entreno en
+                               #   curso) + log.tsx (modal, registro manual) + [sessionId].tsx
   (app)/                      # área del ENTRENADOR. Guard de sesión + rebota clientes a (client).
     _layout.tsx               # Drawer (drawerContent = AppDrawerContent)
     (tabs)/
@@ -444,8 +480,10 @@ src/
                                #   AssignedRoutineView) para la vista de cliente
     nutrition/                # catálogo + editor + NutritionPlanDetail (solo lectura, vista de cliente)
     exercises/                # catálogo de ejercicios (usado por el editor de rutinas)
-    workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura).
-                               #   SessionLoggerForm y SessionDetailView los usan entrenador y cliente
+    workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura,
+                               #   logging.ts = helpers de borrador compartidos). SessionLoggerForm
+                               #   (registro manual) y SessionDetailView los usan entrenador y cliente;
+                               #   ActiveSessionForm + useStopwatch = entreno en curso (solo cliente)
     <feature>/
       index.ts                # API pública del módulo (ÚNICA puerta de entrada)
       gateway.ts               # interfaz(es) de infra que el módulo necesita

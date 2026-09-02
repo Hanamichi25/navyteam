@@ -54,6 +54,13 @@ export function todayShortLabel(): string {
   return `${DIAS_CORTOS[today.getDay()]} ${today.getDate()} ${MESES_CORTOS[today.getMonth()]}`;
 }
 
+/** Mes y día de una fecha `dd/mm/aaaa` en formato corto (ej: {day:"2", month:"sep"}), o `null`. */
+export function monthDayShort(value: string): { day: string; month: string } | null {
+  const date = parseDdMmAaaa(value);
+  if (!date) return null;
+  return { day: String(date.getDate()), month: MESES_CORTOS[date.getMonth()] ?? '' };
+}
+
 /** Días de la semana con lunes = 0 … domingo = 6 (el orden que usan los horarios). */
 export const WEEKDAYS_ES = [
   'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',

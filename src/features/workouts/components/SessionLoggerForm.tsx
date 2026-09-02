@@ -9,11 +9,15 @@ import { useClient } from '@/features/clients';
 import { useExercises } from '@/features/exercises';
 import { useRoutine } from '@/features/routines';
 import { parseDdMmAaaa, todayDdMmAaaa } from '@/lib/date';
-import { createId } from '@/lib/id';
-import type { RoutineBlock } from '@/types/routine';
-import type { WorkoutSessionInput } from '@/types/workout';
 import { useCreateWorkoutSession } from '../hooks/useWorkouts';
-import { SetRow, type DraftSet } from './SetRow';
+import {
+  draftsFromBlocks,
+  newSet,
+  toInputExercises,
+  type DraftExercise,
+  type DraftSet,
+} from '../logging';
+import { SetRow } from './SetRow';
 
 interface SessionLoggerFormProps {
   clientId: string;
@@ -21,57 +25,6 @@ interface SessionLoggerFormProps {
   onDone: () => void;
   /** Mensaje cuando el cliente no tiene rutinas asignadas (varía coach/cliente). */
   emptyMessage?: string;
-}
-
-interface DraftExercise {
-  blockId: string;
-  exerciseId: string;
-  exerciseName: string;
-  sets: DraftSet[];
-}
-
-/** Primer número de un texto de carga libre ("40 kg" → 40, "Peso corporal" → null). */
-function parseLeadingWeight(suggestedLoad: string): number | null {
-  const match = /^\s*(\d+)/.exec(suggestedLoad);
-  return match ? Number(match[1]) : null;
-}
-
-function newSet(reps: number | null, weightKg: number | null): DraftSet {
-  return { key: createId('set'), reps, weightKg, rpe: null };
-}
-
-function draftsFromBlocks(
-  blocks: RoutineBlock[],
-  nameById: Map<string, string>,
-): DraftExercise[] {
-  return blocks.map((block) => {
-    const targetReps = Math.round((block.repsMin + block.repsMax) / 2);
-    const targetWeight = parseLeadingWeight(block.suggestedLoad);
-    return {
-      blockId: block.id,
-      exerciseId: block.exerciseId,
-      exerciseName: nameById.get(block.exerciseId) ?? 'Ejercicio',
-      sets: Array.from({ length: Math.max(block.sets, 1) }, () => newSet(targetReps, targetWeight)),
-    };
-  });
-}
-
-/** Convierte los borradores a `exercises` del input, descartando series/ejercicios vacíos. */
-function toInputExercises(drafts: DraftExercise[]): WorkoutSessionInput['exercises'] {
-  return drafts
-    .map((draft) => ({
-      exerciseId: draft.exerciseId,
-      exerciseName: draft.exerciseName,
-      sets: draft.sets
-        .filter((set) => set.reps !== null && set.reps > 0)
-        .map((set, i) => ({
-          setNumber: i + 1,
-          reps: set.reps as number,
-          weightKg: set.weightKg ?? 0,
-          ...(set.rpe === null ? {} : { rpe: set.rpe }),
-        })),
-    }))
-    .filter((exercise) => exercise.sets.length > 0);
 }
 
 /**

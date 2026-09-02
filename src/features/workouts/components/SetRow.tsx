@@ -1,13 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-/** Serie en edición dentro del formulario de registro (campos vacíos = `null`). */
-export interface DraftSet {
-  key: string;
-  reps: number | null;
-  weightKg: number | null;
-  rpe: number | null;
-}
+import type { DraftSet } from '../logging';
 
 interface SetRowProps {
   index: number;
@@ -17,12 +11,14 @@ interface SetRowProps {
   removable: boolean;
 }
 
-function toNumber(text: string): number | null {
+/** Texto → número entero, o `null` si queda vacío. */
+export function toNumber(text: string): number | null {
   const digits = text.replace(/[^0-9]/g, '');
   return digits === '' ? null : Number(digits);
 }
 
-function Cell({
+/** Celda numérica reutilizable (reps / kg / RPE) de una fila de serie. */
+export function SetCell({
   value,
   onChangeText,
   placeholder,
@@ -52,19 +48,19 @@ export function SetRow({ index, set, onChange, onRemove, removable }: SetRowProp
   return (
     <View className="flex-row items-center gap-2">
       <Text className="w-5 text-center text-sm font-bold text-ink-faint">{index + 1}</Text>
-      <Cell
+      <SetCell
         value={set.reps}
         onChangeText={(text) => onChange({ reps: toNumber(text) })}
         placeholder="reps"
         accessibilityLabel={`Serie ${index + 1}: repeticiones`}
       />
-      <Cell
+      <SetCell
         value={set.weightKg}
         onChangeText={(text) => onChange({ weightKg: toNumber(text) })}
         placeholder="kg"
         accessibilityLabel={`Serie ${index + 1}: peso en kg`}
       />
-      <Cell
+      <SetCell
         value={set.rpe}
         onChangeText={(text) => onChange({ rpe: toNumber(text) })}
         placeholder="RPE"

@@ -70,6 +70,7 @@ export function createMockWorkoutsGateway(): WorkoutsGateway {
         routineId: input.routineId,
         routineName: input.routineName,
         date: input.date,
+        ...(input.durationMin === undefined ? {} : { durationMin: input.durationMin }),
         ...(input.notes ? { notes: input.notes } : {}),
         exercises,
       };

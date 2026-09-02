@@ -10,11 +10,14 @@ import { AssignedRoutineView } from './AssignedRoutineView';
 
 interface TodayRoutineCardProps {
   assignedRoutines: AssignedRoutine[];
+  /** Si se pasa, muestra el botón "Iniciar entreno" para la rutina del día. */
+  onStartWorkout?: (routineId: string) => void;
 }
 
 /** Bloque "Hoy te toca": la rutina del día (o descanso) con sus ejercicios plegables. */
 export function TodayRoutineCard({
   assignedRoutines,
+  onStartWorkout,
 }: TodayRoutineCardProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const today = weekdayIndexMonday();
@@ -63,19 +66,36 @@ export function TodayRoutineCard({
         </Text>
       ))}
 
+      {onStartWorkout
+        ? todays.map((routine) => (
+            <Pressable
+              key={routine.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Iniciar entreno: ${routine.name}`}
+              onPress={() => onStartWorkout(routine.id)}
+              className="h-12 flex-row items-center justify-center gap-2 rounded-2xl bg-primary active:bg-primary-dark"
+            >
+              <Ionicons name="play" size={16} color="#FFFFFF" />
+              <Text className="text-sm font-bold text-white">
+                {todays.length > 1 ? `Iniciar ${routine.name}` : 'Iniciar entreno'}
+              </Text>
+            </Pressable>
+          ))
+        : null}
+
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((value) => !value)}
-        className="flex-row items-center gap-1.5 self-start rounded-full bg-primary px-4 py-2 active:bg-primary-dark"
+        className="flex-row items-center gap-1.5 self-center py-1"
       >
-        <Text className="text-xs font-bold text-white">
+        <Text className="text-xs font-bold text-primary">
           {expanded ? 'Ocultar ejercicios' : 'Ver ejercicios'}
         </Text>
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={14}
-          color="#FFFFFF"
+          color="#2563EB"
         />
       </Pressable>
 

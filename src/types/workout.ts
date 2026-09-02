@@ -37,6 +37,8 @@ export interface WorkoutSession {
   routineName: string;
   /** Texto en formato `dd/mm/aaaa`, igual que `DateField` / `BodyMeasurement`. */
   date: string;
+  /** Duración en minutos (entero), si se cronometró el entreno. */
+  durationMin?: number;
   notes?: string;
   exercises: ExerciseLog[];
 }
@@ -54,6 +56,8 @@ export interface WorkoutSessionSummary {
   setCount: number;
   /** Volumen total = Σ reps × peso de todas las series. */
   totalVolumeKg: number;
+  /** Duración en minutos (entero), si se cronometró el entreno. */
+  durationMin?: number;
 }
 
 /** Campos que llegan al `create()` de una sesión. */
@@ -63,6 +67,8 @@ export interface WorkoutSessionInput {
   routineName: string;
   /** Texto en formato `dd/mm/aaaa`. */
   date: string;
+  /** Duración en minutos (entero), si se cronometró el entreno. */
+  durationMin?: number;
   notes?: string;
   exercises: {
     exerciseId: string;
