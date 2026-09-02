@@ -21,6 +21,7 @@ export default function RootLayout(): React.JSX.Element {
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />
+              <Stack.Screen name="(client)" />
             </Stack>
           </GatewaysProvider>
         </QueryClientProvider>

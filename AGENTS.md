@@ -41,8 +41,8 @@ está **desplegada en EAS Hosting (web)**.
 - Formularios con React Hook Form + Zod.
 
 **Credenciales mock** (`src/features/auth/mocks/users.mock.ts`):
-- `entrenador@fitcoach.com` / `navyteam123`
-- `lucia@navyteam.com` / `coach2026`
+- Entrenador: `entrenador@fitcoach.com` / `navyteam123` · `lucia@navyteam.com` / `coach2026`
+- Cliente (Fase 8): `cliente@navyteam.com` / `cliente2026` (ligado a `cli_luis`)
 
 **Deploy:**
 - Proyecto EAS: `drmartinn25/navyteam` (`projectId` en `app.json`).
@@ -239,38 +239,46 @@ pantalla a su formulario.
 
 ---
 
-## Fase 8 — Vista de cliente (con mocks)
+## Fase 8 — Vista de cliente (con mocks) — COMPLETADA
 
-Que el **cliente** (el "Usuario" del entrenador) tenga su propia experiencia en la misma app:
-ver lo que le han asignado y registrar sus entrenos. **Sin backend real** — Gateways mock.
+El **cliente** tiene su propia experiencia en la misma app (misma sesión mock, Gateways mock).
 
-**Alcance:**
-1. **Rol en el dominio de auth**: `User.role` pasa de `'coach'` a `'coach' | 'client'`. El
-   mock de auth (`users.mock.ts`) gana al menos una credencial de cliente, ligada a un
-   `clientId` del seed de `clients` (ej: `cli_luis`).
-2. **Enrutado por rol**: `app/index.tsx` (o un guard en `(app)/_layout.tsx`) manda a los
-   `coach` a la experiencia actual (Drawer + Tabs) y a los `client` a un **shell propio**
-   más simple — probablemente Tabs de 3: **Mi rutina · Mi alimentación · Mis entrenos**
-   (nombres a confirmar al construir). Nueva carpeta de rutas para el área de cliente
-   (`app/(app)/(client)/…`); la de entrenador se mantiene.
-3. **Mi rutina** (solo lectura): la rutina asignada al cliente y sus bloques
-   (`ClientsGateway` para el snapshot + `RoutinesGateway.get()` para los bloques, igual que
-   hace `SessionLoggerForm`).
-4. **Mi alimentación** (solo lectura): el plan asignado (kcal/día + macros + notas).
-5. **Mis entrenos**: el cliente registra sus propias series (reps + peso, RPE opcional).
-   Reutiliza el flujo de la Fase 7 (`SessionLoggerForm` / grilla editable por ejercicio) pero
-   con el `clientId` fijado al del usuario en sesión — escribe `WorkoutSession` vía el mismo
-   `WorkoutsGateway.create()`. Historial + detalle de sus sesiones (solo lectura o con editar,
-   a confirmar).
-6. **Lado entrenador**: ya consume esas sesiones (pestaña "Entrenos" del perfil, progreso,
-   `TrainingSummaryCard`). Solo hay que verificar que lo que registra el cliente aparece ahí.
+**Qué se hizo:**
+1. **Rol en auth**: `User.role: 'coach' | 'client'` + `User.clientId?` (`src/types/auth.ts`).
+   `users.mock.ts` gana un cliente demo: `cliente@navyteam.com` / `cliente2026`
+   (`clientId: 'cli_luis'`) + `CLIENT_DEMO_CREDENTIALS`.
+2. **Enrutado por rol**: `app/index.tsx`, `app/(auth)/_layout.tsx` y `LoginForm` mandan a
+   `coach` → `/(app)/(tabs)/dashboard`, `client` → `/(client)/routine`.
+   `app/(app)/_layout.tsx` rebota clientes a `/(client)/…`. **Nuevo grupo `app/(client)/`**
+   (hermano de `(app)/`, NO anidado — evita tocar rutas del entrenador): `_layout.tsx` =
+   guard de rol + Tabs de 4 (**Mi rutina · Alimentación · Mis entrenos · Cuenta**), sin Drawer.
+3. **Mi rutina** (`(client)/routine.tsx`, solo lectura): rutinas asignadas + sus bloques, vía
+   `AssignedRoutineView` (nuevo, en `routines`: resuelve `useRoutine` + `useExercises` y pinta
+   `RoutineBlockList`, también nuevo).
+4. **Mi alimentación** (`(client)/nutrition.tsx`, solo lectura): `NutritionPlanDetail` (nuevo,
+   en `nutrition`: kcal + `MacroBar` + notas). El plan completo sale de `useNutritionPlans()`
+   + find por `assignedPlan.id` (el `NutritionGateway` no tiene `get(id)`).
+5. **Mis entrenos** (`(client)/workouts/`, Stack): historial (`SessionSummaryRow`) + "Registrar
+   sesión" → `SessionLoggerForm` **reutilizado** con `clientId = user.clientId` (nuevo prop
+   `emptyMessage` para el texto según rol) → `WorkoutsGateway.create()`. Detalle de sesión
+   solo lectura vía `SessionDetailView` (nuevo, extraído de `session/[sessionId].tsx` del
+   entrenador, que ahora también lo usa). **El cliente NO puede borrar sus sesiones.**
+6. **Cuenta** (`(client)/account.tsx`): identidad + cerrar sesión (con `confirm()`).
+7. `useClient(id, enabled?)` gana el flag `enabled` (como `useRoutine`).
 
-**Límite conocido del mock:** con AsyncStorage la data es local al dispositivo, así que
-"cliente registra → entrenador lo ve" solo se demuestra en un mismo dispositivo cambiando de
-sesión. El cross-user real llega con la Fase 10.
+**Verificado en la app** (Expo web): login de cliente → 4 tabs; Mi rutina/Mi alimentación
+pintan lo asignado; registrar sesión persiste y aparece en el historial; login de entrenador
+sigue yendo al panel; el entrenador ve en el perfil de Luis la sesión que registró el cliente.
 
-**No hacer salvo que se pida:** chat cliente–entrenador, notificaciones, que el cliente edite
-rutinas/planes, onboarding de cliente, registro de peso/mediciones por el cliente.
+**Límite conocido del mock:** con AsyncStorage la data es local al dispositivo → "cliente
+registra → entrenador lo ve" solo se demuestra en un mismo dispositivo cambiando de sesión.
+El cross-user real llega con la Fase 10. La sesión mock **no se persiste** entre recargas
+(sigue en memoria hasta la Fase 9), así que un deep-link directo a `/(client)/…` o `/(app)/…`
+sin sesión cae al login — esperado.
+
+**No se hizo (fuera de alcance):** chat, notificaciones, que el cliente edite rutinas/planes
+o borre sesiones, onboarding de cliente, mediciones por el cliente, progreso por ejercicio en
+la vista de cliente.
 
 ---
 
@@ -373,18 +381,18 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 
 ## Estructura de carpetas
 
-> **Fase 8** parte `(app)/` por rol: el área actual pasa a ser la del entrenador y se añade
-> `(app)/(client)/…` para la vista de cliente; `app/index.tsx` enruta según `User.role`.
-> El árbol de abajo refleja el estado **pre-Fase-8**.
-
 ```
 app/                          # Expo Router (rutas = pantallas)
   _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider
-  index.tsx                   # redirect según sesión → /(app)/(tabs)/dashboard | /(auth)/login
+  index.tsx                   # redirect según sesión y rol → (app) coach | (client) | (auth)
   (auth)/
-    _layout.tsx               # si hay sesión → app
+    _layout.tsx               # si hay sesión → área según rol
     login.tsx
-  (app)/                      # área autenticada. Guard de sesión aquí.
+  (client)/                   # área del CLIENTE (Fase 8). Guard de rol. Sin Drawer.
+    _layout.tsx               # Tabs (Mi rutina, Alimentación, Mis entrenos, Cuenta)
+    routine.tsx · nutrition.tsx · account.tsx
+    workouts/                 # _layout.tsx (Stack) + index.tsx + log.tsx (modal) + [sessionId].tsx
+  (app)/                      # área del ENTRENADOR. Guard de sesión + rebota clientes a (client).
     _layout.tsx               # Drawer (drawerContent = AppDrawerContent)
     (tabs)/
       _layout.tsx             # Tabs (Inicio, Usuarios, Rutinas, Alimentación, Perfil)
@@ -415,10 +423,12 @@ src/
     auth/                     # login + sesión (Zustand)
     dashboard/                # tab Inicio
     clients/                  # lista de clientes + perfil de cliente + asignación de rutinas
-    routines/                 # catálogo de rutinas + editor con bloques de ejercicio
-    nutrition/                # catálogo de planes de alimentación
+    routines/                 # catálogo + editor con bloques + vista solo-lectura (RoutineBlockList,
+                               #   AssignedRoutineView) para la vista de cliente
+    nutrition/                # catálogo + editor + NutritionPlanDetail (solo lectura, vista de cliente)
     exercises/                # catálogo de ejercicios (usado por el editor de rutinas)
-    workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura)
+    workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura).
+                               #   SessionLoggerForm y SessionDetailView los usan entrenador y cliente
     <feature>/
       index.ts                # API pública del módulo (ÚNICA puerta de entrada)
       gateway.ts               # interfaz(es) de infra que el módulo necesita
@@ -504,7 +514,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 5. ✅ **Fase 5** — **CRUD de Alimentación** (planes solo objetivo: kcal + macros + notas).
 6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
 7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Rediseño visual del dashboard aplicado después (datos aún mock); conexión a datos reales aplazada a Fase 10.
-8. **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
+8. ✅ **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol, grupo `app/(client)/`): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
 9. **Fase 9** — Backend real de autenticación **multi-rol** (Gateway + proveedor + secure-store + refresh).
 10. **Fase 10** — Conectar todos los Gateways a datos reales (esquema BD, migraciones, **permisos por rol** — cliente ve solo lo suyo).
 11. **Fase 11** — Facturación.

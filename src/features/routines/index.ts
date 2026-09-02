@@ -1,3 +1,5 @@
+export { AssignedRoutineView } from './components/AssignedRoutineView';
+export { RoutineBlockList } from './components/RoutineBlockList';
 export { RoutineCard } from './components/RoutineCard';
 export { RoutineEditorForm } from './components/RoutineEditorForm';
 export type { RoutinesGateway } from './gateway';

@@ -19,6 +19,8 @@ interface SessionLoggerFormProps {
   clientId: string;
   /** Se llama tras guardar la sesión (la pantalla cierra el modal). */
   onDone: () => void;
+  /** Mensaje cuando el cliente no tiene rutinas asignadas (varía coach/cliente). */
+  emptyMessage?: string;
 }
 
 interface DraftExercise {
@@ -77,7 +79,11 @@ function toInputExercises(drafts: DraftExercise[]): WorkoutSessionInput['exercis
  * una rutina asignada al cliente y ajusta las series realizadas por ejercicio
  * (prellenadas desde los objetivos de la rutina).
  */
-export function SessionLoggerForm({ clientId, onDone }: SessionLoggerFormProps): React.JSX.Element {
+export function SessionLoggerForm({
+  clientId,
+  onDone,
+  emptyMessage = 'Este cliente no tiene rutinas asignadas. Asígnale una desde la pestaña Rutinas para registrar una sesión.',
+}: SessionLoggerFormProps): React.JSX.Element {
   const client = useClient(clientId);
   const exercises = useExercises();
   const createSession = useCreateWorkoutSession();
@@ -179,11 +185,7 @@ export function SessionLoggerForm({ clientId, onDone }: SessionLoggerFormProps):
 
   if (assignedRoutines.length === 0) {
     return (
-      <FeedbackState
-        variant="empty"
-        iconName="clipboard-outline"
-        message="Este cliente no tiene rutinas asignadas. Asígnale una desde la pestaña Rutinas para registrar una sesión."
-      />
+      <FeedbackState variant="empty" iconName="clipboard-outline" message={emptyMessage} />
     );
   }
 

@@ -1,4 +1,5 @@
 export { NutritionPlanCard } from './components/NutritionPlanCard';
+export { NutritionPlanDetail } from './components/NutritionPlanDetail';
 export { NutritionPlanForm } from './components/NutritionPlanForm';
 export type { NutritionGateway } from './gateway';
 export {

@@ -2,12 +2,20 @@ import { Redirect, Stack } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth';
 
-/** Grupo de autenticación. Si ya hay sesión, se salta el login. */
+/** Grupo de autenticación. Si ya hay sesión, salta al área según el rol. */
 export default function AuthLayout(): React.JSX.Element {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
 
-  if (isAuthenticated) {
-    return <Redirect href="/(app)/(tabs)/dashboard" />;
+  if (user) {
+    return (
+      <Redirect
+        href={
+          user.role === 'client'
+            ? '/(client)/routine'
+            : '/(app)/(tabs)/dashboard'
+        }
+      />
+    );
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

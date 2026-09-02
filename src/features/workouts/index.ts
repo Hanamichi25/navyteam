@@ -1,4 +1,5 @@
 export { ExerciseProgressChart } from './components/ExerciseProgressChart';
+export { SessionDetailView } from './components/SessionDetailView';
 export { SessionLoggerForm } from './components/SessionLoggerForm';
 export { SessionSummaryRow } from './components/SessionSummaryRow';
 export { TrainedExerciseRow } from './components/TrainedExerciseRow';

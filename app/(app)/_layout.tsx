@@ -5,14 +5,19 @@ import { AppDrawerContent } from '@/components/AppDrawerContent';
 import { useAuthStore } from '@/features/auth';
 
 /**
- * Área autenticada. Drawer (menú lateral) que envuelve las Tabs y las pantallas
- * secundarias. Redirige a Login si no hay sesión mock activa.
+ * Área del **entrenador**. Drawer (menú lateral) que envuelve las Tabs y las
+ * pantallas secundarias. Redirige a Login si no hay sesión, y a la vista de
+ * cliente si el usuario en sesión es un cliente.
  */
 export default function AppLayout(): React.JSX.Element {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
 
-  if (!isAuthenticated) {
+  if (!user) {
     return <Redirect href="/(auth)/login" />;
+  }
+
+  if (user.role === 'client') {
+    return <Redirect href="/(client)/routine" />;
   }
 
   return (

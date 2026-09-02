@@ -19,10 +19,14 @@ export function useClients(): AsyncState<Client[]> {
 }
 
 /** Carga el detalle de un cliente por id. */
-export function useClient(id: string): AsyncState<ClientDetail> {
+export function useClient(id: string, enabled = true): AsyncState<ClientDetail> {
   const gateway = useClientsGateway();
   return toAsyncState(
-    useQuery({ queryKey: clientKey(id), queryFn: () => gateway.get(id) }),
+    useQuery({
+      queryKey: clientKey(id),
+      queryFn: () => gateway.get(id),
+      enabled: enabled && id !== '',
+    }),
     'No se pudo cargar el perfil del usuario',
   );
 }

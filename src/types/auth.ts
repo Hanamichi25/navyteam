@@ -6,6 +6,9 @@
  * de modo que reemplazar los mocks sea un cambio de implementación y no de interfaz.
  */
 
+/** Rol dentro de NavyTeam: entrenador (panel) o cliente (su propia vista). */
+export type UserRole = 'coach' | 'client';
+
 /** Usuario autenticado tal como lo consume la app (sin credenciales). */
 export interface User {
   id: string;
@@ -13,8 +16,13 @@ export interface User {
   email: string;
   /** URL del avatar. En esta fase apunta a una imagen remota de placeholder. */
   avatarUrl: string;
-  /** Rol dentro de NavyTeam. Por ahora solo entrenadores usan el panel. */
-  role: 'coach';
+  role: UserRole;
+  /**
+   * Solo para `role: 'client'`: id del `Client` correspondiente en el dominio de
+   * clientes. Es lo que ata la sesión del cliente a sus datos (rutina/plan
+   * asignados, sesiones registradas).
+   */
+  clientId?: string;
 }
 
 /** Credenciales que el formulario de login envía al servicio de auth. */
