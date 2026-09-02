@@ -1,0 +1,30 @@
+# Patrones (estilo .gitignore) que codebase-memory-mcp NO debe indexar.
+# Objetivo: que ningún secreto acabe dentro del grafo / graph.db.zst.
+# El indexador ya excluye por defecto .git, node_modules, .expo, dist, .claude.
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local
+secrets/
+*.secret.*
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.mobileprovision
+**/serviceAccount*.json
+**/*credentials*
+**/*service-account*
+
+# Configuración de agentes / herramientas locales
+.agents/
+.codebase-memory/
+
+# Ruido sin valor para el grafo
+*.log
+coverage/
+*.tsbuildinfo

@@ -30,8 +30,17 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files / secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local
+secrets/
+*.secret.*
+
+# codebase-memory-mcp (índice del grafo; contiene estructura del código sin cifrar)
+.codebase-memory/
 
 # typescript
 *.tsbuildinfo
