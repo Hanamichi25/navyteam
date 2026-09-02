@@ -17,7 +17,11 @@ export function toNumber(text: string): number | null {
   return digits === '' ? null : Number(digits);
 }
 
-/** Celda numérica reutilizable (reps / kg / RPE) de una fila de serie. */
+/**
+ * Celda numérica reutilizable (reps / kg / RPE) de una fila de serie. El
+ * `TextInput` va envuelto en un `View flex-1`: en web un `<input>` con `flex-1`
+ * directo no encoge por debajo de su ancho intrínseco y desborda la fila.
+ */
 export function SetCell({
   value,
   onChangeText,
@@ -30,16 +34,18 @@ export function SetCell({
   accessibilityLabel: string;
 }): React.JSX.Element {
   return (
-    <TextInput
-      accessibilityLabel={accessibilityLabel}
-      className="h-11 flex-1 rounded-xl border border-line bg-surface-field px-2 text-center text-base text-ink"
-      value={value === null ? '' : String(value)}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor="#94A3B8"
-      keyboardType="numeric"
-      maxLength={4}
-    />
+    <View className="h-11 flex-1">
+      <TextInput
+        accessibilityLabel={accessibilityLabel}
+        className="h-11 w-full rounded-xl border border-line bg-surface-field px-2 text-center text-base text-ink"
+        value={value === null ? '' : String(value)}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
+        keyboardType="numeric"
+        maxLength={4}
+      />
+    </View>
   );
 }
 
