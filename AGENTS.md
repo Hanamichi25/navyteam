@@ -76,11 +76,15 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
 - Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
 - **El dashboard (`(tabs)/dashboard.tsx`) tiene el rediseño visual aplicado pero sigue con
   datos 100% mock** (`DashboardGateway` mock + `dashboardData.mock.ts`): banner de próxima
-  sesión, "Resumen" con toggle Semana/Mes y deltas, accesos rápidos (a `clients/routines/nutrition`
-  `new`), "Hoy" con filas expandibles y feed de "Actividad reciente" con filtro por tipo. Las
-  métricas por periodo, el feed y las sesiones **no derivan de datos reales** — el swap a
-  `clients` + `workouts` queda para la Fase 10. Guía visual: canvas de Claude Design
+  sesión, "Resumen" con toggle Semana/Mes y deltas, **"Logros de la semana"** (PRs de carga/1RM/
+  volumen + rachas de los clientes; fila → progreso del ejercicio o perfil), "Hoy" con filas
+  expandibles y feed de "Actividad reciente" con filtro por tipo. Las métricas por periodo, los
+  logros, el feed y las sesiones **no derivan de datos reales** — el swap a `clients` +
+  `workouts` queda para la Fase 10 (`weeklyAchievements` saldría de comparar los PRs de
+  `progress.ts` con la fecha de cada récord). Guía visual: canvas de Claude Design
   (`https://claude.ai/code/artifact/9d4e9de6-0c1a-47e9-859a-02af918f3eda`, artboard "Rediseño").
+  Los 3 accesos rápidos "Nuevo cliente/rutina/plan" **se quitaron** (redundantes con los FAB `+`
+  de las tabs Usuarios/Rutinas/Alimentación).
 - El tab "Alimentación" puede recortarse en pantallas < 390 px de ancho (ancho de la
   etiqueta, sigue pendiente). **Corregido en cambio**: el recorte vertical de las
   etiquetas de los 5 tabs (se veían cortadas a la mitad o directamente invisibles) —

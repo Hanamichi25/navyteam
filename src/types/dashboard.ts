@@ -2,8 +2,8 @@
  * Tipos del dominio del dashboard del entrenador.
  *
  * La forma anticipa un futuro endpoint `GET /dashboard` del backend real.
- * TODO(backend): las métricas por periodo y el feed se derivarán de `clients`
- * + `workouts` en la Fase 9; hoy salen del seed mock.
+ * TODO(backend): las métricas por periodo, el feed y los logros se derivarán de
+ * `clients` + `workouts` en la Fase 10; hoy salen del seed mock.
  */
 
 /** Tendencia de una métrica respecto al periodo anterior. */
@@ -60,12 +60,33 @@ export interface UpcomingSession {
   detail: string;
 }
 
+/** Tipo de logro de un cliente en la semana. */
+export type AchievementKind = 'weight_pr' | 'e1rm_pr' | 'volume_pr' | 'streak';
+
+/** Logro reciente de un cliente (bloque "Logros de la semana"). */
+export interface Achievement {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientAvatarUrl: string;
+  kind: AchievementKind;
+  /**
+   * Ejercicio relacionado (solo en los PRs de ejercicio). Si está, la fila
+   * enlaza a la pantalla de progreso de ese ejercicio.
+   */
+  exerciseId?: string;
+  /** Texto ya formateado, ej: "Sentadilla — 50 kg, nuevo récord de carga". */
+  detail: string;
+}
+
 /** Payload completo del dashboard para un entrenador. */
 export interface DashboardData {
   /** Nº de clientes activos, mostrado en el encabezado. */
   activeUsers: number;
   /** Métricas del "Resumen", una lista por periodo. */
   stats: Record<DashboardPeriod, DashboardStat[]>;
+  /** Logros de clientes en los últimos 7 días (PRs, rachas). */
+  weeklyAchievements: Achievement[];
   recentActivity: ActivityItem[];
   upcomingSessions: UpcomingSession[];
 }

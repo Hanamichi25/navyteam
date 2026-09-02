@@ -1,10 +1,11 @@
+export { AchievementRow } from './components/AchievementRow';
 export { ActivityRow } from './components/ActivityRow';
 export { NextSessionCard } from './components/NextSessionCard';
 export { PeriodToggle } from './components/PeriodToggle';
-export { QuickActions, type QuickAction } from './components/QuickActions';
 export { SessionRow } from './components/SessionRow';
 export { StatCard } from './components/StatCard';
 export {
+  ACHIEVEMENT_KIND_META,
   ACTIVITY_FILTERS,
   ACTIVITY_KIND_META,
   STAT_ICONS,

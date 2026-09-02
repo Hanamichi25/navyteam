@@ -9,16 +9,15 @@ import { ChipGroup } from '@/components/ChipGroup';
 import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
 import {
+  AchievementRow,
   ACTIVITY_FILTERS,
   ActivityRow,
   NextSessionCard,
   PeriodToggle,
-  QuickActions,
   SessionRow,
   StatCard,
   useDashboardData,
   type ActivityFilter,
-  type QuickAction,
 } from '@/features/dashboard';
 import { todayShortLabel } from '@/lib/date';
 import { openDrawer } from '@/lib/openDrawer';
@@ -41,26 +40,16 @@ export default function DashboardScreen(): React.JSX.Element {
   const firstName = user.name.split(' ')[0] ?? user.name;
   const openMenu = (): void => openDrawer(navigation);
 
-  const quickActions: readonly QuickAction[] = [
-    {
-      key: 'new-client',
-      label: 'Nuevo cliente',
-      icon: 'person-add-outline',
-      onPress: () => router.push('/(app)/(tabs)/clients/new'),
-    },
-    {
-      key: 'new-routine',
-      label: 'Nueva rutina',
-      icon: 'barbell-outline',
-      onPress: () => router.push('/(app)/(tabs)/routines/new'),
-    },
-    {
-      key: 'new-plan',
-      label: 'Nuevo plan',
-      icon: 'nutrition-outline',
-      onPress: () => router.push('/(app)/(tabs)/nutrition/new'),
-    },
-  ];
+  const openAchievement = (
+    clientId: string,
+    exerciseId: string | undefined,
+  ): void => {
+    router.push(
+      exerciseId
+        ? `/(app)/(tabs)/clients/${clientId}/progress/${exerciseId}`
+        : `/(app)/(tabs)/clients/${clientId}`,
+    );
+  };
 
   const data = dashboard.status === 'ready' ? dashboard.data : null;
   const nextSession = data?.upcomingSessions[0] ?? null;
@@ -132,8 +121,24 @@ export default function DashboardScreen(): React.JSX.Element {
             </View>
           </View>
 
-          <View className="px-5">
-            <QuickActions actions={quickActions} />
+          <View className="gap-3 px-5">
+            <Text className="text-lg font-bold text-ink">Logros de la semana</Text>
+            {dashboard.data.weeklyAchievements.length === 0 ? (
+              <Text className="text-sm text-ink-muted">
+                Aún no hay logros esta semana. Aparecerán aquí cuando tus clientes
+                batan un récord o mantengan su racha.
+              </Text>
+            ) : (
+              dashboard.data.weeklyAchievements.map((achievement) => (
+                <AchievementRow
+                  key={achievement.id}
+                  item={achievement}
+                  onPress={() =>
+                    openAchievement(achievement.clientId, achievement.exerciseId)
+                  }
+                />
+              ))
+            )}
           </View>
 
           <View className="gap-3 px-5">

@@ -4,8 +4,9 @@ import type { DashboardData } from '@/types/dashboard';
  * Datos semilla del dashboard, usados por `dashboardGateway.mock.ts`.
  *
  * TODO(backend): reemplazar por `GET /dashboard` (o la query equivalente de
- * Supabase). Las métricas por periodo, el feed y las sesiones se derivarán de
- * `clients` + `workouts` en la Fase 9.
+ * Supabase). Las métricas por periodo, los logros, el feed y las sesiones se
+ * derivarán de `clients` + `workouts` en la Fase 10 (p.ej. `weeklyAchievements`
+ * sale de comparar los PRs de `progress.ts` con la fecha de cada récord).
  */
 export const DASHBOARD_DATA_SEED: DashboardData = {
   activeUsers: 12,
@@ -21,6 +22,42 @@ export const DASHBOARD_DATA_SEED: DashboardData = {
       { id: 'measurements', label: 'Mediciones nuevas', value: 15, delta: -3, trend: 'down' },
     ],
   },
+  weeklyAchievements: [
+    {
+      id: 'ach_001',
+      clientId: 'cli_maria',
+      clientName: 'María López',
+      clientAvatarUrl: 'https://i.pravatar.cc/150?img=32',
+      kind: 'weight_pr',
+      exerciseId: 'exc_squat',
+      detail: 'Sentadilla — 50 kg, nuevo récord de carga',
+    },
+    {
+      id: 'ach_002',
+      clientId: 'cli_pedro',
+      clientName: 'Pedro García',
+      clientAvatarUrl: 'https://i.pravatar.cc/150?img=15',
+      kind: 'e1rm_pr',
+      exerciseId: 'exc_bench_press',
+      detail: 'Press de banca — 78 kg de 1RM estimado',
+    },
+    {
+      id: 'ach_003',
+      clientId: 'cli_maria',
+      clientName: 'María López',
+      clientAvatarUrl: 'https://i.pravatar.cc/150?img=32',
+      kind: 'streak',
+      detail: '5 semanas seguidas entrenando',
+    },
+    {
+      id: 'ach_004',
+      clientId: 'cli_luis',
+      clientName: 'Luis Fernández',
+      clientAvatarUrl: 'https://i.pravatar.cc/150?img=13',
+      kind: 'volume_pr',
+      detail: 'Fuerza Superior — 3.200 kg, su mayor volumen en una sesión',
+    },
+  ],
   recentActivity: [
     {
       id: 'act_001',
