@@ -11,6 +11,7 @@ export default function ClientWorkoutsLayout(): React.JSX.Element {
       />
       <Stack.Screen name="log" options={{ presentation: 'modal' }} />
       <Stack.Screen name="[sessionId]" />
+      <Stack.Screen name="progress/[exerciseId]" />
     </Stack>
   );
 }

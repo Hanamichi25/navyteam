@@ -13,7 +13,16 @@
       "Bash(timeout 40 bash -c 'until curl -sf http://localhost:8081 >/dev/null 2>&1; do sleep 1; done')",
       "Bash(rm \"c:\\\\Users\\\\PC\\\\Documents\\\\Projects\\\\AdminApp\\\\navyteam\\\\app\\\\\\(app\\)\\\\\\(tabs\\)\\\\clients\\\\[id].tsx\")",
       "Bash(mkdir -p \"c:\\\\Users\\\\PC\\\\Documents\\\\Projects\\\\AdminApp\\\\navyteam\\\\app\\\\\\(app\\)\\\\\\(tabs\\)\\\\clients\\\\[id]\")",
-      "Bash(node drive4.js)"
+      "Bash(node drive4.js)",
+      "Bash(cd \"c:\\\\Users\\\\PC\\\\Documents\\\\Projects\\\\AdminApp\\\\navyteam\" && find . -maxdepth 2 -iname \"*.mcp*\" -o -iname \"mcp.json\" 2>/dev/null | grep -v node_modules *)",
+      "Read(//c/Users/PC/**)",
+      "Read(//c/Users/PC/.claude/**)",
+      "Bash(grep -o '\"mcpServers\"[^}]*}' \"$HOME/.claude.json\" 2>/dev/null | head -c 3000 *)",
+      "Read(//c/Users/PC/.claude/hooks/**)",
+      "Bash(\"/c/Users/PC/AppData/Local/Programs/codebase-memory-mcp/codebase-memory-mcp.exe\" install *)",
+      "Bash(claude mcp *)",
+      "PowerShell(Get-Command claude -ErrorAction SilentlyContinue)",
+      "Bash(node -e ' *)"
     ]
   },
   "enabledPlugins": {

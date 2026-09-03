@@ -11,10 +11,10 @@ import type { ImageSourcePropType } from 'react-native';
 // Rutas relativas a propósito: `require()` de un asset con el alias `@/` no es
 // fiable en Metro (el alias se pensó para módulos, no para assets).
 const BANNERS: readonly ImageSourcePropType[] = [
-  require('../../assets/routines/legs.jpg'),
-  require('../../assets/routines/back.jpg'),
-  require('../../assets/routines/woman.jpg'),
-  require('../../assets/routines/group.jpg'),
+  require('../../assets/routines/p1.jpg'),
+  require('../../assets/routines/p2.jpg'),
+  require('../../assets/routines/p3.jpg'),
+  require('../../assets/routines/p4.jpg'),
 ];
 
 /** Suma de char codes del id → índice estable (misma rutina, misma portada). */

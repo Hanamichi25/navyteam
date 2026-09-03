@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "react-native": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend/skills/react-native/SKILL.md",
+      "computedHash": "febc1780fcace64e3c5f2c52c387b19465a76e19c8713a70207bcabdfccf305e"
+    }
+  }
+}

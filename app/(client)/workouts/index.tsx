@@ -8,8 +8,10 @@ import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
 import {
   SessionSummaryRow,
+  TrainedExerciseRow,
   TrainingSummaryCard,
   useClientWorkouts,
+  useTrainedExercises,
 } from '@/features/workouts';
 
 export default function ClientWorkoutsScreen(): React.JSX.Element {
@@ -17,6 +19,7 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
   const user = useAuthStore((state) => state.user);
   const clientId = user?.clientId ?? '';
   const workouts = useClientWorkouts(clientId);
+  const trainedExercises = useTrainedExercises(clientId);
 
   if (!user) {
     return <Redirect href="/(auth)/login" />;
@@ -70,6 +73,24 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
                 onPress={() => router.push(`/(client)/workouts/${item.id}`)}
               />
             )}
+            ListFooterComponent={
+              trainedExercises.status === 'ready' && trainedExercises.data.length > 0 ? (
+                <View className="mt-2 gap-3">
+                  <Text className="text-sm font-bold text-ink">Progreso por ejercicio</Text>
+                  {trainedExercises.data.map((summary) => (
+                    <TrainedExerciseRow
+                      key={summary.exerciseId}
+                      summary={summary}
+                      onPress={() =>
+                        router.push(
+                          `/(client)/workouts/progress/${summary.exerciseId}?name=${encodeURIComponent(summary.exerciseName)}`,
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null
+            }
           />
           <Fab accessibilityLabel="Registrar sesión" onPress={goToLog} />
         </>

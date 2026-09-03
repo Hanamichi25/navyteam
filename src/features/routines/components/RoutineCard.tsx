@@ -15,17 +15,20 @@ interface RoutineCardProps {
 export function RoutineCard({ routine, onPress }: RoutineCardProps): React.JSX.Element {
   const content = (
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <View>
+      {/* Contenedor con alto fijo + imagen absoluta al 100%: es la forma
+          fiable en react-native-web (un <Image>/<ImageBackground> suelto se
+          renderiza a su ancho intrínseco y se recorta mal). El banner es
+          960×400 (2.4:1) recortado desde arriba (titular visible). */}
+      <View className="w-full overflow-hidden bg-ink" style={{ height: 148 }}>
         <Image
           source={routineBanner(routine.id)}
-          className="w-full bg-surface-field"
-          style={{ height: 128 }}
+          style={{ width: '100%', height: '100%' }}
           resizeMode="cover"
         />
         <Badge
           label={ROUTINE_LEVEL_LABEL[routine.level]}
           tone="primary"
-          className="absolute left-3 top-3"
+          className="absolute bottom-3 right-3"
         />
       </View>
 
