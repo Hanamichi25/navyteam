@@ -1,7 +1,8 @@
 import { Image, View } from 'react-native';
 
 interface AvatarProps {
-  uri: string;
+  /** URL de la imagen; si falta, se muestra el fondo del avatar. */
+  uri: string | undefined;
   /** Lado del avatar en px. */
   size?: number;
   /** Clases extra desde el consumidor. */

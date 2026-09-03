@@ -46,8 +46,9 @@ export default function ClientLayout(): React.JSX.Element {
     >
       <Tabs.Screen
         name="routine"
-        options={{ title: 'Mi rutina', tabBarIcon: tabIcon('barbell', 'barbell-outline') }}
+        options={{ title: 'Inicio', tabBarIcon: tabIcon('home', 'home-outline') }}
       />
+      <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen
         name="nutrition"
         options={{ title: 'Alimentación', tabBarIcon: tabIcon('nutrition', 'nutrition-outline') }}

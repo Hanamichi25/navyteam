@@ -6,6 +6,8 @@ import type { DashboardGateway } from '@/features/dashboard/gateway';
 import { createMockDashboardGateway } from '@/features/dashboard/mocks/dashboardGateway.mock';
 import type { ExercisesGateway } from '@/features/exercises/gateway';
 import { createMockExercisesGateway } from '@/features/exercises/mocks/exercisesGateway.mock';
+import type { MessagesGateway } from '@/features/messages/gateway';
+import { createMockMessagesGateway } from '@/features/messages/mocks/messagesGateway.mock';
 import type { NutritionGateway } from '@/features/nutrition/gateway';
 import { createMockNutritionGateway } from '@/features/nutrition/mocks/nutritionGateway.mock';
 import type { RoutinesGateway } from '@/features/routines/gateway';
@@ -25,6 +27,7 @@ interface Gateways {
   dashboard: DashboardGateway;
   exercises: ExercisesGateway;
   workouts: WorkoutsGateway;
+  messages: MessagesGateway;
 }
 
 const GatewaysContext = createContext<Gateways | null>(null);
@@ -38,6 +41,7 @@ export function GatewaysProvider({ children }: { children: ReactNode }): React.J
       dashboard: createMockDashboardGateway(),
       exercises: createMockExercisesGateway(),
       workouts: createMockWorkoutsGateway(),
+      messages: createMockMessagesGateway(),
     }),
     [],
   );
@@ -75,4 +79,8 @@ export function useExercisesGateway(): ExercisesGateway {
 
 export function useWorkoutsGateway(): WorkoutsGateway {
   return useGateways().workouts;
+}
+
+export function useMessagesGateway(): MessagesGateway {
+  return useGateways().messages;
 }
