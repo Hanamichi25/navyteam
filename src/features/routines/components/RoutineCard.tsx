@@ -4,6 +4,7 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { Badge } from '@/components/Badge';
 import type { Routine } from '@/types/routine';
 import { ROUTINE_LEVEL_LABEL } from '../labels';
+import { routineBanner } from '../routineImages';
 
 interface RoutineCardProps {
   routine: Routine;
@@ -16,8 +17,9 @@ export function RoutineCard({ routine, onPress }: RoutineCardProps): React.JSX.E
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
       <View>
         <Image
-          source={{ uri: routine.imageUrl }}
-          className="h-32 w-full bg-surface-field"
+          source={routineBanner(routine.id)}
+          className="w-full bg-surface-field"
+          style={{ height: 128 }}
           resizeMode="cover"
         />
         <Badge

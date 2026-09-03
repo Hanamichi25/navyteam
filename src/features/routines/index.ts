@@ -4,6 +4,7 @@ export { RoutineCard } from './components/RoutineCard';
 export { RoutineEditorForm } from './components/RoutineEditorForm';
 export { TodayRoutineCard } from './components/TodayRoutineCard';
 export { WeekScheduleStrip } from './components/WeekScheduleStrip';
+export { routineBanner } from './routineImages';
 export type { RoutinesGateway } from './gateway';
 export {
   useCreateRoutine,
