@@ -14,12 +14,14 @@ import {
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
   MeasurementHistoryList,
+  SubscriptionCard,
   useClient,
   useUnassignPlanFromClient,
   useUnassignRoutineFromClient,
   WeightEvolutionChart,
   WeightProgressCard,
 } from '@/features/clients';
+import { useThread } from '@/features/messages';
 import {
   SessionSummaryRow,
   TrainedExerciseRow,
@@ -46,7 +48,13 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const unassignPlan = useUnassignPlanFromClient();
   const workouts = useClientWorkouts(id);
   const trainedExercises = useTrainedExercises(id);
+  const thread = useThread(id);
   const [tab, setTab] = useState<ProfileTab>('routines');
+
+  const lastMessage =
+    thread.status === 'ready' && thread.data.length > 0
+      ? thread.data[thread.data.length - 1]
+      : null;
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
@@ -95,6 +103,13 @@ export default function ClientProfileScreen(): React.JSX.Element {
               <MetricTile value={`${client.data.heightCm} cm`} label="Altura" />
               <MetricTile value={client.data.bmi.toFixed(1)} label="IMC" />
             </View>
+
+            <SubscriptionCard
+              client={client.data}
+              onRegisterPayment={() =>
+                router.push(`/(app)/(tabs)/clients/${id}/register-payment`)
+              }
+            />
 
             <WeightProgressCard progress={client.data.weightProgress} />
 
@@ -241,19 +256,34 @@ export default function ClientProfileScreen(): React.JSX.Element {
             ) : null}
 
             {tab === 'messages' ? (
-              <Text className="py-4 text-center text-sm text-ink-muted">
-                No hay mensajes todavía.
-              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push(`/(app)/(tabs)/clients/${id}/messages`)}
+                className="gap-2 rounded-2xl border border-line bg-surface-subtle p-4 active:bg-surface-field"
+              >
+                <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
+                  {lastMessage
+                    ? lastMessage.sender === 'coach'
+                      ? 'Último mensaje · tú'
+                      : `Último mensaje · ${client.data.name.split(' ')[0]}`
+                    : 'Conversación'}
+                </Text>
+                <Text className="text-sm leading-5 text-ink" numberOfLines={3}>
+                  {lastMessage?.text ??
+                    'Aún no hay mensajes con este cliente. Toca para escribirle.'}
+                </Text>
+                <Text className="self-end text-xs font-bold text-primary">
+                  Abrir conversación ›
+                </Text>
+              </Pressable>
             ) : null}
           </ScrollView>
 
           <View className="border-t border-line px-5 py-3">
             <Button
-              label="Enviar Feedback"
+              label="Escribir mensaje"
               fullWidth
-              onPress={() => {
-                // TODO(backend): abrir composición de feedback para el cliente.
-              }}
+              onPress={() => router.push(`/(app)/(tabs)/clients/${id}/messages`)}
             />
           </View>
         </>

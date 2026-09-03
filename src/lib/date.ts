@@ -42,6 +42,21 @@ export function todayDdMmAaaa(): string {
   return `${dd}/${mm}/${today.getFullYear()}`;
 }
 
+/** `Date` → `dd/mm/aaaa`. */
+export function formatDdMmAaaa(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${date.getFullYear()}`;
+}
+
+/** Suma `n` meses a una fecha (ajusta al último día del mes si hace falta). */
+export function addMonths(date: Date, n: number): Date {
+  const result = new Date(date.getFullYear(), date.getMonth() + n, date.getDate());
+  // Si el día se desbordó (ej: 31/01 + 1 mes), retrocede al último día del mes previo.
+  if (result.getDate() !== date.getDate()) result.setDate(0);
+  return result;
+}
+
 const DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const MESES_CORTOS = [
   'ene', 'feb', 'mar', 'abr', 'may', 'jun',

@@ -43,6 +43,7 @@ export function ClientEditorForm({
       birthDate: initialValues?.birthDate ?? '',
       heightCm: initialValues?.heightCm ?? null,
       goalKg: initialValues?.weightProgress.goalKg ?? null,
+      monthlyFeeEur: initialValues?.monthlyFeeEur ?? null,
       startWeightKg: null,
       notes: initialValues?.notes ?? '',
     },
@@ -59,6 +60,7 @@ export function ClientEditorForm({
         birthDate: values.birthDate,
         heightCm: values.heightCm!,
         goalKg: values.goalKg!,
+        monthlyFeeEur: values.monthlyFeeEur!,
         notes: values.notes.trim() || undefined,
       },
       isCreate ? values.startWeightKg : null,
@@ -169,6 +171,22 @@ export function ClientEditorForm({
             )}
           />
         ) : null}
+
+        <Controller
+          control={control}
+          name="monthlyFeeEur"
+          render={({ field: { value, onChange, onBlur }, fieldState }) => (
+            <NumberField
+              label="Cuota mensual"
+              placeholder="40"
+              suffix="€/mes"
+              value={value}
+              onChange={onChange}
+              onBlur={onBlur}
+              error={fieldState.error?.message}
+            />
+          )}
+        />
 
         <Controller
           control={control}

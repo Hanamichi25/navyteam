@@ -8,6 +8,12 @@
 /** Objetivo de entrenamiento del cliente. */
 export type ClientGoal = 'weight_loss' | 'muscle_gain' | 'maintenance';
 
+/**
+ * Estado de la suscripción, derivado de `subscriptionUntil` vs. hoy.
+ * `expiring` = vigente pero a 7 días o menos de vencer.
+ */
+export type SubscriptionStatus = 'active' | 'expiring' | 'expired' | 'none';
+
 /** Cliente tal como aparece en la lista "Mis Usuarios". */
 export interface Client {
   id: string;
@@ -16,6 +22,23 @@ export interface Client {
   goal: ClientGoal;
   /** Texto relativo ya formateado (ej: "Activa hoy"). El backend devolverá un timestamp. */
   lastActivity: string;
+  /**
+   * Vigencia de la suscripción, `dd/mm/aaaa`, o `null` si nunca pagó. El
+   * estado (`SubscriptionStatus`) se deriva con `subscriptionStatus()`.
+   */
+  subscriptionUntil: string | null;
+}
+
+/** Un pago de suscripción registrado por el entrenador. */
+export interface Payment {
+  id: string;
+  /** Fecha del pago, `dd/mm/aaaa`. */
+  date: string;
+  amountEur: number;
+  /** Meses de suscripción que cubre este pago. */
+  months: number;
+  /** Fecha hasta la que deja la suscripción vigente, `dd/mm/aaaa`. */
+  coversUntil: string;
 }
 
 /** Progreso de peso mostrado en el perfil del cliente. */
@@ -73,6 +96,8 @@ export interface ClientInput {
   birthDate: string;
   heightCm: number;
   goalKg: number;
+  /** Cuota mensual de la suscripción, en euros. */
+  monthlyFeeEur: number;
   notes?: string;
 }
 
@@ -94,4 +119,8 @@ export interface ClientDetail extends Client {
   assignedRoutines: AssignedRoutine[];
   /** Plan de alimentación asignado, o `null` si no tiene ninguno. */
   assignedPlan: AssignedNutritionPlan | null;
+  /** Cuota mensual de la suscripción, en euros. */
+  monthlyFeeEur: number;
+  /** Pagos registrados, más reciente al final. `subscriptionUntil` se hereda de `Client`. */
+  payments: Payment[];
 }

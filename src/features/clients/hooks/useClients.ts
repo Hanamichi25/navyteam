@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useClientsGateway } from '@/gateways';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { BodyMeasurement, Client, ClientDetail, ClientInput } from '@/types/client';
+import type { PaymentInput } from '../gateway';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
@@ -143,6 +144,20 @@ export function useAddMeasurement() {
       clientId: string;
       input: Omit<BodyMeasurement, 'id'>;
     }) => gateway.addMeasurement(clientId, input),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
+      queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Registra un pago de suscripción e invalida el detalle del cliente y la lista. */
+export function useRegisterPayment() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, input }: { clientId: string; input: PaymentInput }) =>
+      gateway.registerPayment(clientId, input),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKey(variables.clientId) });
       queryClient.invalidateQueries({ queryKey: clientsKey });

@@ -1,3 +1,4 @@
+import { addMonths, formatDdMmAaaa, parseDdMmAaaa } from '@/lib/date';
 import { delay } from '@/lib/delay';
 import { createId } from '@/lib/id';
 import { readJSON, writeJSON } from '@/lib/storage';
@@ -7,6 +8,7 @@ import type {
   Client,
   ClientDetail,
   ClientInput,
+  Payment,
 } from '@/types/client';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
@@ -35,6 +37,9 @@ function normalizeClient(client: ClientDetail): ClientDetail {
     ...client,
     birthDate: client.birthDate ?? '',
     measurements: client.measurements ?? [],
+    monthlyFeeEur: client.monthlyFeeEur ?? 0,
+    subscriptionUntil: client.subscriptionUntil ?? null,
+    payments: client.payments ?? [],
   };
 }
 
@@ -44,8 +49,8 @@ async function readAll(): Promise<ClientDetail[]> {
 }
 
 function toListItem(detail: ClientDetail): Client {
-  const { id, name, avatarUrl, goal, lastActivity } = detail;
-  return { id, name, avatarUrl, goal, lastActivity };
+  const { id, name, avatarUrl, goal, lastActivity, subscriptionUntil } = detail;
+  return { id, name, avatarUrl, goal, lastActivity, subscriptionUntil };
 }
 
 function formatMemberSince(date: Date): string {
@@ -104,6 +109,8 @@ export function createMockClientsGateway(): ClientsGateway {
         measurements: [],
         assignedRoutines: [],
         assignedPlan: null,
+        subscriptionUntil: null,
+        payments: [],
       };
       await writeJSON(STORAGE_KEY, [...all, detail]);
       return detail;
@@ -246,6 +253,41 @@ export function createMockClientsGateway(): ClientsGateway {
           startKg: isFirstMeasurement ? measurement.weightKg : client.weightProgress.startKg,
           currentKg: measurement.weightKg,
         },
+      };
+      const next = [...all];
+      next[index] = updated;
+      await writeJSON(STORAGE_KEY, next);
+      return updated;
+    },
+
+    async registerPayment(clientId, input) {
+      await delay(500);
+      const all = await readAll();
+      const index = all.findIndex((client) => client.id === clientId);
+      if (index === -1) {
+        throw new Error(`Cliente no encontrado: ${clientId}`);
+      }
+      const client = all[index]!;
+      // Un pago extiende desde el máximo entre hoy y la vigencia actual: si la
+      // suscripción sigue viva, se suma al final; si ya venció, arranca hoy.
+      const now = new Date();
+      const currentUntil = client.subscriptionUntil
+        ? parseDdMmAaaa(client.subscriptionUntil)
+        : null;
+      const base =
+        currentUntil && currentUntil.getTime() > now.getTime() ? currentUntil : now;
+      const coversUntil = formatDdMmAaaa(addMonths(base, input.months));
+      const payment: Payment = {
+        id: createId('pay'),
+        date: input.date,
+        amountEur: input.amountEur,
+        months: input.months,
+        coversUntil,
+      };
+      const updated: ClientDetail = {
+        ...client,
+        subscriptionUntil: coversUntil,
+        payments: [...client.payments, payment],
       };
       const next = [...all];
       next[index] = updated;

@@ -18,6 +18,7 @@ export function clientSchema(isCreate: boolean) {
       birthDate: z.string(),
       heightCm: z.number().nullable(),
       goalKg: z.number().nullable(),
+      monthlyFeeEur: z.number().nullable(),
       startWeightKg: z.number().nullable(),
       notes: z.string(),
     })
@@ -40,6 +41,13 @@ export function clientSchema(isCreate: boolean) {
       }
       if (values.goalKg === null || values.goalKg <= 0) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['goalKg'], message: 'Ingresa la meta de peso' });
+      }
+      if (values.monthlyFeeEur === null || values.monthlyFeeEur < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['monthlyFeeEur'],
+          message: 'Ingresa la cuota mensual',
+        });
       }
       if (isCreate && (values.startWeightKg === null || values.startWeightKg <= 0)) {
         ctx.addIssue({

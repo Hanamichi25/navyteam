@@ -2,6 +2,15 @@ import type { BodyMeasurement, Client, ClientDetail, ClientInput } from '@/types
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
+/** Campos que llegan al `registerPayment()` de un cliente. */
+export interface PaymentInput {
+  /** Fecha del pago, `dd/mm/aaaa`. */
+  date: string;
+  amountEur: number;
+  /** Meses de suscripción que cubre. */
+  months: number;
+}
+
 /**
  * Interfaz de infraestructura que necesita el módulo "clientes".
  * TODO(backend): la implementación real (Fase 9) habla contra la API/BD.
@@ -30,4 +39,10 @@ export interface ClientsGateway {
    * `weightKg`, `weightProgress.currentKg` y `bmi` a partir de ella.
    */
   addMeasurement(clientId: string, input: Omit<BodyMeasurement, 'id'>): Promise<ClientDetail>;
+  /**
+   * Registra un pago de suscripción: añade el `Payment` y extiende
+   * `subscriptionUntil` los `months` indicados (desde hoy o desde la vigencia
+   * actual, lo que sea mayor).
+   */
+  registerPayment(clientId: string, input: PaymentInput): Promise<ClientDetail>;
 }

@@ -14,6 +14,7 @@ const CLIENTS: readonly Client[] = [
     avatarUrl: 'https://i.pravatar.cc/150?img=32',
     goal: 'weight_loss',
     lastActivity: 'Activa hoy',
+    subscriptionUntil: '15/10/2026',
   },
   {
     id: 'cli_pedro',
@@ -21,6 +22,7 @@ const CLIENTS: readonly Client[] = [
     avatarUrl: 'https://i.pravatar.cc/150?img=15',
     goal: 'muscle_gain',
     lastActivity: 'Activo ayer',
+    subscriptionUntil: '28/09/2026',
   },
   {
     id: 'cli_ana',
@@ -28,6 +30,7 @@ const CLIENTS: readonly Client[] = [
     avatarUrl: 'https://i.pravatar.cc/150?img=47',
     goal: 'maintenance',
     lastActivity: 'Activa hace 2 días',
+    subscriptionUntil: '20/08/2026',
   },
   {
     id: 'cli_luis',
@@ -35,6 +38,7 @@ const CLIENTS: readonly Client[] = [
     avatarUrl: 'https://i.pravatar.cc/150?img=13',
     goal: 'muscle_gain',
     lastActivity: 'Activo hace 3 días',
+    subscriptionUntil: '06/09/2026',
   },
   {
     id: 'cli_sofia',
@@ -42,6 +46,7 @@ const CLIENTS: readonly Client[] = [
     avatarUrl: 'https://i.pravatar.cc/150?img=24',
     goal: 'weight_loss',
     lastActivity: 'Activa hace 5 días',
+    subscriptionUntil: '30/09/2026',
   },
 ];
 
@@ -66,6 +71,11 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_002', name: 'Cardio HIIT', schedule: 'Mar/Jue', exerciseCount: 5, durationMin: 20 },
     ],
     assignedPlan: { id: 'nut_001', name: 'Plan Déficit Calórico', kcalPerDay: 1800 },
+    monthlyFeeEur: 45,
+    payments: [
+      { id: 'pay_maria_1', date: '15/06/2026', amountEur: 45, months: 1, coversUntil: '15/07/2026' },
+      { id: 'pay_maria_2', date: '15/07/2026', amountEur: 135, months: 3, coversUntil: '15/10/2026' },
+    ],
   },
   cli_pedro: {
     ...CLIENTS[1]!,
@@ -87,6 +97,10 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_006', name: 'Empuje / Tirón', schedule: 'Mar/Vie', exerciseCount: 9, durationMin: 55 },
     ],
     assignedPlan: { id: 'nut_002', name: 'Plan Volumen Limpio', kcalPerDay: 3200 },
+    monthlyFeeEur: 40,
+    payments: [
+      { id: 'pay_pedro_1', date: '28/08/2026', amountEur: 40, months: 1, coversUntil: '28/09/2026' },
+    ],
   },
   cli_ana: {
     ...CLIENTS[2]!,
@@ -106,6 +120,10 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_004', name: 'Flexibilidad Total', schedule: 'Lun/Mié/Vie', exerciseCount: 6, durationMin: 30 },
     ],
     assignedPlan: { id: 'nut_003', name: 'Plan Mantenimiento Equilibrado', kcalPerDay: 2400 },
+    monthlyFeeEur: 35,
+    payments: [
+      { id: 'pay_ana_1', date: '20/07/2026', amountEur: 35, months: 1, coversUntil: '20/08/2026' },
+    ],
   },
   cli_luis: {
     ...CLIENTS[3]!,
@@ -126,6 +144,11 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_003', name: 'Fuerza Superior', schedule: 'Lun/Mié/Vie', exerciseCount: 10, durationMin: 50 },
     ],
     assignedPlan: { id: 'nut_002', name: 'Plan Volumen Limpio', kcalPerDay: 3200 },
+    monthlyFeeEur: 50,
+    payments: [
+      { id: 'pay_luis_1', date: '06/07/2026', amountEur: 50, months: 1, coversUntil: '06/08/2026' },
+      { id: 'pay_luis_2', date: '06/08/2026', amountEur: 50, months: 1, coversUntil: '06/09/2026' },
+    ],
   },
   cli_sofia: {
     ...CLIENTS[4]!,
@@ -147,5 +170,9 @@ export const CLIENT_DETAILS_SEED: Record<string, ClientDetail> = {
       { id: 'rtn_005', name: 'Cardio Quema Grasa', schedule: 'Sáb', exerciseCount: 7, durationMin: 35 },
     ],
     assignedPlan: { id: 'nut_001', name: 'Plan Déficit Calórico', kcalPerDay: 1800 },
+    monthlyFeeEur: 38,
+    payments: [
+      { id: 'pay_sofia_1', date: '30/08/2026', amountEur: 38, months: 1, coversUntil: '30/09/2026' },
+    ],
   },
 };
