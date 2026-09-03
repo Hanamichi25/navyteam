@@ -35,7 +35,8 @@ está **desplegada en EAS Hosting (web)**.
 - Estado de sesión en memoria con Zustand (`src/features/auth/store/authStore.ts`).
 - **Toda la data es mock local** (`*.mock.ts` con delay artificial y caso de error), cargada
   con `src/lib/useAsyncData.ts` (máquina `loading | ready | error`).
-- Features de dominio: `auth`, `dashboard`, `clients`, `routines`, `nutrition` — cada una con
+- Features de dominio: `auth`, `dashboard`, `clients`, `routines`, `nutrition`, `exercises`,
+  `workouts`, `messages` — cada una con
   `index.ts` como API pública.
 - Estilos con **NativeWind v4** (tema en `tailwind.config.js`: `primary`, `ink`, `surface`, `line`).
 - Formularios con React Hook Form + Zod.
@@ -63,7 +64,8 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
 - **Pantallas** ↔ features: Menú lateral (`AppDrawerContent`), Mis Usuarios + Perfil de Usuario
   (`clients`), Rutinas (`routines`), Planes de Alimentación (`nutrition`), Perfil entrenador
   (`(tabs)/profile.tsx`, provisional).
-- Placeholders del Drawer: `(app)/{messages,stats,settings,support}.tsx` → componente `ComingSoon`.
+- Placeholders del Drawer: `(app)/{stats,settings,support}.tsx` → componente `ComingSoon`
+  (`messages.tsx` ya es real, ver feature `messages`).
 - UI compartida en `src/components/`: `Avatar`, `Badge`, `ChipGroup`, `Fab`, `FeedbackState`,
   `ListRow`, `MacroBar`, `MetricTile`, `ProgressBar`, `ScreenHeader`, `SearchField`, `ComingSoon`, `AppDrawerContent`.
 - Helpers en `src/lib/`: `delay`, `useAsyncData`, `openDrawer`.
@@ -72,8 +74,10 @@ Toda la UI de los mockups está construida con datos mock y navegación real. De
 
 - Los FAB `+` y el botón de filtro "⋯" del header son placeholders con `// TODO(backend)`
   → los formularios de alta/edición son **Fase 5**.
-- Imágenes de tarjetas: `https://picsum.photos/seed/...` en la data mock. `expo-image` no se instaló.
-- Sección "Mensajes" (tab interno del perfil de cliente y entrada del Drawer) sin contenido real.
+- Imágenes de tarjetas de **nutrición**: `https://picsum.photos/seed/...` en la data mock
+  (`expo-image` no se instaló). Las de **rutina** ya no: `routineBanner(id)` sirve una de
+  `src/assets/routines/*.jpg` (banners del usuario optimizados). `Routine.imageUrl` se conserva
+  para portadas subidas en la Fase 10.
 - **El dashboard (`(tabs)/dashboard.tsx`) tiene el rediseño visual aplicado pero sigue con
   datos 100% mock** (`DashboardGateway` mock + `dashboardData.mock.ts`): banner de próxima
   sesión, "Resumen" con toggle Semana/Mes y deltas, **"Logros de la semana"** (PRs de carga/1RM/
@@ -338,6 +342,39 @@ la vista de cliente.
 
 ---
 
+## Pulido pre-Fase 9 (con mocks) — COMPLETADO
+
+Tres mejoras de producto pedidas antes de arrancar el backend. Todo mock, mismo patrón.
+
+1. **Mensajería entrenador↔cliente** — feature nueva `src/features/messages/` (Gateway + mock
+   AsyncStorage `@navyteam/messages`, un hilo por cliente, seed con `cli_luis`).
+   `MessageThread` = hilo compartido (burbujas + compositor), lo montan el entrenador
+   (`clients/[id]/messages`, y lista de hilos en el Drawer `(app)/messages.tsx`) y el cliente
+   (`(client)/messages`, pantalla oculta `href:null`). `CoachMessageCard` = tarjeta del home
+   del cliente con el último feedback. El `coachThreads()` del Gateway devuelve solo `clientId`
+   + último mensaje; el nombre/avatar los cruza la pantalla con `useClients()` (el Gateway de
+   mensajería no conoce el dominio de clientes). Límite: AsyncStorage es local → cross-device
+   real en Fase 10.
+2. **Home del cliente** — la tab `routine` pasa a titularse **"Inicio"** (icono `home`): saludo
+   + `CoachMessageCard` arriba de `TodayRoutineCard` / "Tu semana" / lista de rutinas. El botón
+   "Enviar Feedback" del perfil del cliente (entrenador) pasa a "Escribir mensaje".
+3. **Portadas de rutina** — `src/assets/routines/*.jpg` (4 banners del usuario, optimizados a
+   ~1080 px con `@expo/image-utils`). `routineBanner(id)` (en `routineImages.ts`) elige una por
+   hash del id; `RoutineCard` la usa (`style={{ height: 128 }}` explícito: un `<Image>` con
+   `source` estático y solo `w-full` toma su alto intrínseco en web). Originales en
+   `resources/banners/`.
+4. **Suscripción por cliente** (adelanto de la Fase 11) — `ClientDetail.monthlyFeeEur` +
+   `payments: Payment[]`; `Client` hereda `subscriptionUntil`. `SubscriptionStatus`
+   (`active|expiring|expired|none`, `expiring` = ≤7 días) se deriva en
+   `src/features/clients/subscription.ts` (funciones puras). `ClientsGateway.registerPayment()`
+   añade el pago y extiende `subscriptionUntil` N meses desde hoy o desde la vigencia vigente.
+   `normalizeClient()` migra los clientes ya en localStorage. UI: `SubscriptionCard` en el
+   perfil + modal `clients/[id]/register-payment` (fecha, importe prellenado, 1/3/6/12 meses,
+   preview de nueva vigencia); campo "Cuota mensual" en `ClientEditorForm`; badge de aviso en
+   `ClientListItem` para vencida/por vencer; estado en la Cuenta del cliente (solo lectura).
+
+---
+
 ## Fase 9 — Backend real de autenticación (multi-rol)
 
 Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz que consume la UI.
@@ -445,8 +482,9 @@ app/                          # Expo Router (rutas = pantallas)
     _layout.tsx               # si hay sesión → área según rol
     login.tsx
   (client)/                   # área del CLIENTE (Fase 8). Guard de rol. Sin Drawer.
-    _layout.tsx               # Tabs (Mi rutina, Alimentación, Mis entrenos, Cuenta)
-    routine.tsx · nutrition.tsx · account.tsx
+    _layout.tsx               # Tabs (Inicio, Alimentación, Mis entrenos, Cuenta) + messages (href:null)
+    routine.tsx               # tab "Inicio" (home: saludo + CoachMessageCard + hoy + semana + rutinas)
+    nutrition.tsx · account.tsx · messages.tsx (hilo con el entrenador, se abre desde el home)
     workouts/                 # _layout.tsx (Stack) + index.tsx + start.tsx (modal, entreno en
                                #   curso) + log.tsx (modal, registro manual) + [sessionId].tsx
   (app)/                      # área del ENTRENADOR. Guard de sesión + rebota clientes a (client).
@@ -458,15 +496,16 @@ app/                          # Expo Router (rutas = pantallas)
                                #   new.tsx (modal) + [id]/index.tsx (perfil) +
                                #   [id]/edit.tsx (push) + [id]/assign-routine.tsx,
                                #   [id]/assign-plan.tsx, [id]/add-measurement.tsx,
-                               #   [id]/log-session.tsx (modales) +
-                               #   [id]/session/[sessionId].tsx, [id]/progress/[exerciseId].tsx (push)
+                               #   [id]/register-payment.tsx, [id]/log-session.tsx (modales) +
+                               #   [id]/messages.tsx (hilo), [id]/session/[sessionId].tsx,
+                               #   [id]/progress/[exerciseId].tsx (push)
       routines/               # tab Rutinas → _layout.tsx (Stack) + index.tsx (lista) +
                                #   new.tsx (modal) + [id].tsx (editor, push normal)
       nutrition/              # tab Alimentación → _layout.tsx (Stack) + index.tsx (lista) + new.tsx (modal)
       profile.tsx             # tab Perfil (entrenador, provisional)
     exercises/                # catálogo de ejercicios (fuera de las tabs, con entrada en el Drawer)
                                #   _layout.tsx (Stack) + index.tsx + new.tsx (modal) + [id].tsx (modal)
-    messages.tsx              # placeholder (Drawer)
+    messages.tsx              # lista de conversaciones (Drawer) → feature messages
     stats.tsx                 # placeholder (Drawer)
     settings.tsx              # placeholder (Drawer)
     support.tsx               # placeholder (Drawer)
@@ -475,11 +514,13 @@ src/
   components/                 # UI compartida y agnóstica (Button, Input, TextField, SelectField,
                                # NumberField, DateField, Card, Badge, Avatar, Fab...)
   gateways/                   # GatewaysProvider — inyecta la implementación de cada Gateway
+  assets/routines/            # portadas de rutina (banners del usuario optimizados) → routineImages.ts
   lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer, date, schedule)
   features/
     auth/                     # login + sesión (Zustand)
     dashboard/                # tab Inicio
-    clients/                  # lista de clientes + perfil de cliente + asignación de rutinas
+    clients/                  # clientes + perfil (mediciones, suscripción/pagos, asignación de rutinas)
+    messages/                 # hilo entrenador↔cliente (MessageThread compartido, CoachMessageCard)
     routines/                 # catálogo + editor con bloques + vista solo-lectura (RoutineBlockList,
                                #   AssignedRoutineView) para la vista de cliente
     nutrition/                # catálogo + editor + NutritionPlanDetail (solo lectura, vista de cliente)
@@ -576,5 +617,6 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 8. ✅ **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol, grupo `app/(client)/`): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
 9. **Fase 9** — Backend real de autenticación **multi-rol** (Gateway + proveedor + secure-store + refresh).
 10. **Fase 10** — Conectar todos los Gateways a datos reales (esquema BD, migraciones, **permisos por rol** — cliente ve solo lo suyo).
-11. **Fase 11** — Facturación.
+11. **Fase 11** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
+    mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
 12. **Futuro** — Monorepo + extracción de módulos; offline-first; notificaciones (recordatorio de sesión, cliente registró entreno); chat cliente–entrenador; EAS Build + tiendas.
