@@ -50,3 +50,12 @@ export function isLoginSuccess(result: LoginResult): result is LoginSuccess {
 
 /** Estados posibles del flujo de autenticación en la UI. */
 export type AuthStatus = 'idle' | 'loading' | 'error' | 'success';
+
+/**
+ * Sesión vigente tal como la expone `AuthGateway`. `expiresAt` es epoch ms;
+ * lo usa `authStore` para decidir cuándo llamar a `refresh()`.
+ */
+export interface Session {
+  user: User;
+  expiresAt: number;
+}

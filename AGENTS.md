@@ -375,24 +375,55 @@ Tres mejoras de producto pedidas antes de arrancar el backend. Todo mock, mismo 
 
 ---
 
-## Fase 9 — Backend real de autenticación (multi-rol)
+## Fase 9 — Backend real de autenticación (multi-rol) — COMPLETADA
 
-Sustituir el mock de auth por un backend real, manteniendo intacta la interfaz que consume la UI.
-Ahora con **dos roles**: entrenador y cliente.
+Se sustituyó el mock de auth por **Supabase Auth** (ver "Decisión de backend"), manteniendo
+intacta la interfaz que consume la UI. Dos roles: entrenador y cliente.
 
-**Alcance:**
-1. **Decidir el proveedor de backend PRIMERO** (ver "Decisión de backend" abajo). No escribir
-   código de integración ni instalar SDKs de proveedor hasta que esté decidido — preguntar.
-2. `src/features/auth/gateway.ts` → interfaz `AuthGateway` (`signIn`, `signOut`, `getSession`, `refresh`).
-   El mock actual pasa a ser `mockAuthGateway`. La implementación real
-   (`supabaseAuthGateway` / `cognitoAuthGateway` / …) se inyecta desde `app/_layout.tsx`.
-   La sesión expone el **rol** (`coach` | `client`) y, para clientes, su `clientId`.
-3. `authStore` recibe el `AuthGateway` por inyección, no lo importa.
-4. **Persistencia de sesión** con `expo-secure-store` (access token en memoria, refresh en secure-store).
-5. Manejo de **expiración y refresh** de sesión.
+**Qué se hizo:**
+1. `src/features/auth/gateway.ts` → interfaz `AuthGateway` (`signIn`, `signOut`, `getSession`,
+   `refresh`). El mock original (`authService.mock.ts`) se reescribió como
+   `mocks/authGateway.mock.ts` (`createMockAuthGateway`), implementando la interfaz completa
+   con persistencia simulada — **se conserva** como implementación de referencia para tests y
+   desarrollo offline (no se borra, mismo criterio que el resto de mocks). La implementación
+   real, `supabase/authGateway.supabase.ts` (`createSupabaseAuthGateway`), se inyecta desde
+   `app/_layout.tsx` vía `configureAuthGateway()` — elige Supabase si `EXPO_PUBLIC_SUPABASE_URL`
+   está presente (`.env`, ver `.env.example`), si no cae al mock.
+2. **Rol y `clientId`** viven en `user_metadata` de Supabase Auth (`role`, `name`, `avatar_url`,
+   `client_id`) — se editan a mano desde el dashboard de Supabase o por SQL
+   (`update auth.users set raw_user_meta_data = '{...}'::jsonb where id = '...'`) hasta que la
+   Fase 10 traiga un flujo de alta propio. `supabaseAuthGateway` lanza si a un usuario le falta
+   `role` o tiene uno inválido — un usuario de Supabase sin metadata configurada no puede operar
+   la app, error explícito en vez de fallo silencioso.
+3. `authStore` (`src/features/auth/store/authStore.ts`) recibe el `AuthGateway` por inyección
+   (`configureAuthGateway`, módulo-level, llamado una vez desde `app/_layout.tsx`) — no lo
+   importa directamente. Nuevo estado `restoring: boolean` (`true` hasta que `restore()` — que
+   llama a `getSession()` — resuelve) para diferenciar "todavía no sé si hay sesión" de "no hay
+   sesión"; `RootLayout` no monta el `<Stack>` de navegación hasta `restoring === false`, así los
+   guards de rol de `(auth)/_layout.tsx`, `(app)/_layout.tsx`, `(client)/_layout.tsx` y
+   `app/index.tsx` (que solo miran `user`) nunca ven un falso "no autenticado" en pleno arranque.
+4. **Persistencia de sesión**: `src/lib/secureStorage.ts` (nuevo) — wrapper que usa
+   `expo-secure-store` en nativo (iOS Keychain / Android Keystore) y `localStorage` en web,
+   porque `expo-secure-store` **no tiene implementación web** (`ExpoSecureStore.default
+   .getValueWithKeyAsync is not a function` en vez de fallar de forma legible — se descubrió
+   probando el login real con Playwright). Mismo precedente que `src/lib/confirm.ts` (rama por
+   `Platform.OS`). Lo usan tanto `mockAuthGateway` (sesión mock persistida) como
+   `src/lib/supabase.ts` (`createClient(..., { auth: { storage: secureStorage } })`).
+5. **Refresh de sesión**: `supabase-js` lo maneja internamente (`autoRefreshToken: true`);
+   `AuthGateway.refresh()` expone `supabase.auth.refreshSession()` para el caso en que la UI
+   necesite forzarlo.
 
-**No hacer salvo que se pida:** registro self-service, recuperación de contraseña, biometría,
-OAuth social. (Alta de clientes: la hace el entrenador desde el panel, como ahora.)
+**Verificado con Playwright (Expo web) contra un proyecto Supabase real:** login de un usuario
+`role:'coach'` → dashboard del panel con su nombre real; reload de página → sesión persiste (no
+vuelve a login); "Cerrar Sesión" desde el Drawer → limpia sesión, reload posterior se queda en
+`/login`. Mismo flujo repetido con un usuario `role:'client', client_id:'cli_luis'` → enruta a
+`/(client)/routine` con los datos reales de ese cliente (rutina asignada, mensaje del
+entrenador), persiste tras reload. `typecheck` y `export:web` en verde.
+
+**No se hizo (fuera de alcance, sin pedirse):** registro self-service, recuperación de
+contraseña, biometría, OAuth social (los botones Google/Apple del login siguen siendo
+`// TODO(backend)`). Alta de usuarios: sigue siendo manual desde el dashboard de Supabase — un
+flujo propio (el entrenador da de alta un cliente y esto crea su usuario) es Fase 10.
 
 ---
 
@@ -407,18 +438,17 @@ Los mocks quedan como implementación de referencia para tests y desarrollo offl
 
 ---
 
-## Decisión de backend (ABIERTA)
+## Decisión de backend (TOMADA — Supabase)
 
-Aún **no está decidido**. Candidatos:
+Confirmado por el usuario el 2026-09-04. Razones: Postgres + Auth + Storage + RLS + Realtime;
+camino más corto desde los mocks; coincide con la spec del repo; portable (Postgres estándar);
+la RLS por rol (cliente ve solo lo suyo, entrenador ve sus clientes) sale casi gratis — factor
+que pesó desde que la vista de cliente entró al plan (Fase 8). La Fase 9 ya la usa para auth
+(`@supabase/supabase-js`, credenciales en `.env`/`EXPO_PUBLIC_SUPABASE_URL`+`_ANON_KEY`); la
+Fase 10 la usa para el resto de los Gateways (esquema de BD + RLS).
 
-| Opción | A favor | En contra |
-|---|---|---|
-| **Supabase** | Postgres + Auth + Storage + RLS + Realtime; camino más corto desde los mocks; coincide con la spec del repo; portable (es Postgres estándar). **La RLS por rol (cliente ve solo lo suyo, entrenador ve sus clientes) sale casi gratis** — factor que pesa desde que la vista de cliente entró al plan | SaaS gestionado |
-| **AWS serverless** | Control y escala; encaja si el equipo ya vive en AWS. Stack: API Gateway + Lambda + Aurora Serverless v2 / DynamoDB + Cognito + S3, o Amplify Gen 2 | Más piezas de infra; Cognito incómodo; la autorización por rol hay que construirla a mano; más lento al MVP |
-
-**Regla:** al arrancar la Fase 9, confirmar con el usuario qué proveedor se usa antes de instalar
-dependencias. Independientemente del proveedor, el código se escribe contra las interfaces `Gateway`,
-nunca contra el SDK del proveedor directamente en la UI o el store.
+Independientemente del proveedor, el código se escribe contra las interfaces `Gateway`, nunca
+contra el SDK del proveedor directamente en la UI o el store.
 
 ---
 
@@ -461,11 +491,12 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   (peer que el paquete resuelve de forma no perezosa al importar, aunque no se usen gradientes —
   ver Fase 6) — gráfica de evolución de peso del perfil de cliente y de progresión de carga
   (1RM estimado) del seguimiento de entrenamientos (Fase 7).
+- `@supabase/supabase-js` — backend real (Fase 9: Auth; Fase 10: resto de Gateways).
+- `expo-secure-store` — persistencia de sesión en nativo (ver `src/lib/secureStorage.ts` para
+  el fallback en web, que no lo soporta).
 - Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
 
-**Previsto para Fase 9+ (instalar cuando toque, con confirmación):**
-- `expo-secure-store` — tokens
-- SDK del proveedor de backend elegido (`@supabase/supabase-js` u equivalente)
+**Previsto para más adelante (instalar cuando toque, con confirmación):**
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
 
 **No agregar librerías fuera de lo previsto sin explicar por qué y confirmar.**
@@ -615,7 +646,8 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 6. ✅ **Fase 6** — **CRUD de Clientes** + perfil ampliado (fecha de nacimiento, historial de mediciones, gráfica de peso).
 7. ✅ **Fase 7** — **Registro de entrenamientos** (el entrenador registra series/reps/peso por ejercicio) + seguimiento de progreso (progresión de carga, PRs, adherencia). Rediseño visual del dashboard aplicado después (datos aún mock); conexión a datos reales aplazada a Fase 10.
 8. ✅ **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol, grupo `app/(client)/`): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
-9. **Fase 9** — Backend real de autenticación **multi-rol** (Gateway + proveedor + secure-store + refresh).
+9. ✅ **Fase 9** — Backend real de autenticación **multi-rol** con Supabase (`AuthGateway` +
+   `supabaseAuthGateway` + persistencia de sesión + refresh), verificado para ambos roles.
 10. **Fase 10** — Conectar todos los Gateways a datos reales (esquema BD, migraciones, **permisos por rol** — cliente ve solo lo suyo).
 11. **Fase 11** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
