@@ -29,7 +29,6 @@ import { useThread } from '@/features/messages';
 import { COLORS } from '@/lib/colors';
 import {
   filterSessionsByPeriod,
-  groupSessionsByDay,
   SessionSummaryRow,
   TrainedExerciseRow,
   TrainingSummaryCard,
@@ -65,9 +64,9 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const [tab, setTab] = useState<ProfileTab>('routines');
   const [workoutPeriod, setWorkoutPeriod] = useState<WorkoutHistoryPeriod>('week');
 
-  const workoutGroups = useMemo(() => {
+  const workoutSessions = useMemo(() => {
     if (workouts.status !== 'ready') return [];
-    return groupSessionsByDay(filterSessionsByPeriod(workouts.data, workoutPeriod));
+    return filterSessionsByPeriod(workouts.data, workoutPeriod);
   }, [workouts, workoutPeriod]);
 
   const lastMessage =
@@ -252,55 +251,53 @@ export default function ClientProfileScreen(): React.JSX.Element {
             ) : null}
 
             {tab === 'workouts' ? (
-              <View className="gap-3">
+              <View className="gap-4">
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => router.push(`/(app)/(tabs)/clients/${id}/log-session`)}
-                  className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+                  className="flex-row items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-3 active:bg-surface-subtle"
                 >
                   <Text className="text-sm font-semibold text-primary">+ Registrar sesión</Text>
                 </Pressable>
 
-                <View className="mt-1 flex-row items-center justify-between">
-                  <Text className="text-sm font-bold text-ink">Historial</Text>
-                  <PeriodToggle
-                    options={WORKOUT_PERIOD_OPTIONS}
-                    value={workoutPeriod}
-                    onChange={setWorkoutPeriod}
-                  />
-                </View>
-                {workouts.status === 'loading' ? (
-                  <Text className="text-sm text-ink-faint">Cargando…</Text>
-                ) : workouts.status === 'error' ? (
-                  <Text className="text-sm text-red-500">{workouts.error}</Text>
-                ) : workoutGroups.length === 0 ? (
-                  <Text className="text-sm text-ink-muted">
-                    {workoutPeriod === 'week'
-                      ? 'Sin sesiones esta semana.'
-                      : 'Sin sesiones este mes.'}
-                  </Text>
-                ) : (
-                  workoutGroups.map((group) => (
-                    <View key={group.label} className="gap-2">
-                      <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
-                        {group.label}
-                      </Text>
-                      {group.items.map((summary) => (
+                <View className="gap-3">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-sm font-bold text-ink">Historial</Text>
+                    <PeriodToggle
+                      options={WORKOUT_PERIOD_OPTIONS}
+                      value={workoutPeriod}
+                      onChange={setWorkoutPeriod}
+                    />
+                  </View>
+                  {workouts.status === 'loading' ? (
+                    <Text className="text-sm text-ink-faint">Cargando…</Text>
+                  ) : workouts.status === 'error' ? (
+                    <Text className="text-sm text-red-500">{workouts.error}</Text>
+                  ) : workoutSessions.length === 0 ? (
+                    <Text className="text-sm text-ink-muted">
+                      {workoutPeriod === 'week'
+                        ? 'Sin sesiones esta semana.'
+                        : 'Sin sesiones este mes.'}
+                    </Text>
+                  ) : (
+                    <View className="gap-2.5">
+                      {workoutSessions.map((summary) => (
                         <SessionSummaryRow
                           key={summary.id}
                           summary={summary}
+                          leadingDateBadge
                           onPress={() =>
                             router.push(`/(app)/(tabs)/clients/${id}/session/${summary.id}`)
                           }
                         />
                       ))}
                     </View>
-                  ))
-                )}
+                  )}
+                </View>
 
                 {trainedExercises.status === 'ready' && trainedExercises.data.length > 0 ? (
-                  <>
-                    <Text className="mt-2 text-sm font-bold text-ink">Progreso por ejercicio</Text>
+                  <View className="gap-2.5">
+                    <Text className="text-sm font-bold text-ink">Progreso por ejercicio</Text>
                     {trainedExercises.data.map((summary) => (
                       <TrainedExerciseRow
                         key={summary.exerciseId}
@@ -312,7 +309,7 @@ export default function ClientProfileScreen(): React.JSX.Element {
                         }
                       />
                     ))}
-                  </>
+                  </View>
                 ) : null}
               </View>
             ) : null}

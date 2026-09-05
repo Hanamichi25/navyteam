@@ -66,7 +66,12 @@ export default function ClientWorkoutsScreen(): React.JSX.Element {
           <SectionList<WorkoutSessionSummary>
             sections={sections}
             keyExtractor={(session) => session.id}
-            contentContainerClassName="gap-3 px-5 pb-24 pt-4"
+            contentContainerStyle={{
+              gap: 12,
+              paddingHorizontal: 20,
+              paddingBottom: 96,
+              paddingTop: 16,
+            }}
             showsVerticalScrollIndicator={false}
             stickySectionHeadersEnabled={false}
             ListHeaderComponent={
