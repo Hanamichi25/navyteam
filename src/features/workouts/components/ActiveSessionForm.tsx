@@ -7,6 +7,7 @@ import { FeedbackState } from '@/components/FeedbackState';
 import { useExercises } from '@/features/exercises';
 import { useRoutine } from '@/features/routines';
 import { confirm } from '@/lib/confirm';
+import { COLORS } from '@/lib/colors';
 import { todayDdMmAaaa } from '@/lib/date';
 import type { RoutineBlock } from '@/types/routine';
 
@@ -191,7 +192,7 @@ export function ActiveSessionForm({
             onPress={toggle}
             className="flex-row items-center gap-1.5"
           >
-            <Ionicons name={running ? 'pause' : 'play'} size={15} color="#2563EB" />
+            <Ionicons name={running ? 'pause' : 'play'} size={15} color={COLORS.primary} />
             <Text className="text-sm font-bold text-primary">
               {running ? 'Pausar' : 'Reanudar'}
             </Text>

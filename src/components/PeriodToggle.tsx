@@ -1,25 +1,25 @@
 import { Pressable, Text, View } from 'react-native';
 
-import type { DashboardPeriod } from '@/types/dashboard';
-
-interface PeriodToggleProps {
-  value: DashboardPeriod;
-  onChange: (value: DashboardPeriod) => void;
+interface PeriodOption<T extends string> {
+  value: T;
+  label: string;
 }
 
-const OPTIONS: readonly { value: DashboardPeriod; label: string }[] = [
-  { value: 'week', label: 'Semana' },
-  { value: 'month', label: 'Mes' },
-];
+interface PeriodToggleProps<T extends string> {
+  options: readonly PeriodOption<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}
 
-/** Control segmentado para elegir el periodo de las métricas del "Resumen". */
-export function PeriodToggle({
+/** Control segmentado compacto para elegir un periodo (Semana/Mes, Día/Semana/Mes...). */
+export function PeriodToggle<T extends string>({
+  options,
   value,
   onChange,
-}: PeriodToggleProps): React.JSX.Element {
+}: PeriodToggleProps<T>): React.JSX.Element {
   return (
     <View className="flex-row rounded-full bg-surface-field p-0.5">
-      {OPTIONS.map((option) => {
+      {options.map((option) => {
         const isActive = option.value === value;
         return (
           <Pressable

@@ -1,7 +1,6 @@
 export { AchievementRow } from './components/AchievementRow';
 export { ActivityRow } from './components/ActivityRow';
 export { NextSessionCard } from './components/NextSessionCard';
-export { PeriodToggle } from './components/PeriodToggle';
 export { SessionRow } from './components/SessionRow';
 export { StatCard } from './components/StatCard';
 export {

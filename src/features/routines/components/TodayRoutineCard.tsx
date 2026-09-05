@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { AssignedRoutine } from '@/types/client';
+import { COLORS } from '@/lib/colors';
 import { weekdayIndexMonday, weekdayNameEs } from '@/lib/date';
 import { nextTrainingWeekday, scheduleTrainsOn } from '@/lib/schedule';
 
@@ -95,7 +96,7 @@ export function TodayRoutineCard({
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={14}
-          color="#2563EB"
+          color={COLORS.primary}
         />
       </Pressable>
 

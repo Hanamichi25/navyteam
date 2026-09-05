@@ -46,29 +46,40 @@ export default function MessagesScreen(): React.JSX.Element {
           }
           renderItem={({ item }) => {
             const client = nameById.get(item.clientId);
+            const unread = item.lastSender === 'client';
             return (
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>
                   router.push(`/(app)/(tabs)/clients/${item.clientId}/messages`)
                 }
-                className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-3 active:bg-surface-field"
+                className={
+                  unread
+                    ? 'flex-row items-center gap-3 rounded-xl bg-primary-light p-3 active:bg-surface-field'
+                    : 'flex-row items-center gap-3 rounded-xl bg-surface-subtle p-3 active:bg-surface-field'
+                }
               >
                 <Avatar uri={client?.avatarUrl} size={48} />
                 <View className="flex-1 gap-1">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-base font-bold text-ink">
+                    <Text
+                      className={`text-base ${unread ? 'font-extrabold text-ink' : 'font-bold text-ink'}`}
+                    >
                       {client?.name ?? 'Cliente'}
                     </Text>
                     <Text className="text-xs text-ink-faint">
                       {WHEN_FMT.format(new Date(item.lastAt))}
                     </Text>
                   </View>
-                  <Text className="text-sm text-ink-muted" numberOfLines={1}>
+                  <Text
+                    className={`text-sm ${unread ? 'font-semibold text-ink' : 'text-ink-muted'}`}
+                    numberOfLines={1}
+                  >
                     {item.lastSender === 'coach' ? 'Tú: ' : ''}
                     {item.lastText}
                   </Text>
                 </View>
+                {unread ? <View className="h-2.5 w-2.5 rounded-full bg-primary" /> : null}
               </Pressable>
             );
           }}

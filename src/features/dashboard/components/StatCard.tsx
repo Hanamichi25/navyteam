@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
 import { Badge, type BadgeTone } from '@/components/Badge';
+import { COLORS } from '@/lib/colors';
 import type { DashboardStat } from '@/types/dashboard';
 
 import { STAT_ICONS } from '../labels';
@@ -26,13 +27,13 @@ function formatDelta(delta: number): string {
 /** Tarjeta de métrica del bloque "Resumen" del dashboard. */
 export function StatCard({ stat }: StatCardProps): React.JSX.Element {
   return (
-    <View className="flex-1 rounded-2xl border border-line bg-surface-subtle p-3">
+    <View className="flex-1 rounded-xl border border-line bg-surface-subtle p-3">
       <View className="flex-row items-center justify-between">
         <View className="h-8 w-8 items-center justify-center rounded-full bg-primary-light">
           <Ionicons
             name={STAT_ICONS[stat.id] ?? 'stats-chart-outline'}
             size={16}
-            color="#2563EB"
+            color={COLORS.primary}
           />
         </View>
         <Badge

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import type { Exercise, MuscleGroup } from '@/types/exercise';
 import { MUSCLE_GROUP_LABEL } from '../labels';
 
@@ -25,9 +26,9 @@ interface ExerciseListItemProps {
 /** Fila de un ejercicio del catálogo: icono por grupo muscular + nombre + equipo. */
 export function ExerciseListItem({ exercise, onPress }: ExerciseListItemProps): React.JSX.Element {
   const content = (
-    <View className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-      <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary-light">
-        <Ionicons name={MUSCLE_GROUP_ICON[exercise.muscleGroup]} size={18} color="#2563EB" />
+    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3">
+      <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary-light">
+        <Ionicons name={MUSCLE_GROUP_ICON[exercise.muscleGroup]} size={18} color={COLORS.primary} />
       </View>
       <View className="flex-1">
         <Text className="text-sm font-bold text-ink">{exercise.name}</Text>

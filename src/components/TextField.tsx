@@ -1,5 +1,7 @@
 import { Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
+
 interface TextFieldProps {
   label: string;
   value: string;
@@ -32,7 +34,7 @@ export function TextField({
 
       <TextInput
         className={[
-          'rounded-2xl border px-4 text-base text-ink',
+          'rounded-xl border px-4 text-base text-ink',
           multiline ? 'min-h-24 py-3' : 'h-14',
           hasError ? 'border-red-400 bg-red-50' : 'border-line bg-surface-field',
         ].join(' ')}
@@ -40,7 +42,7 @@ export function TextField({
         onChangeText={onChangeText}
         onBlur={onBlur}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.inkFaint}
         keyboardType={keyboardType}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}

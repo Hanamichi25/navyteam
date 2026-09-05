@@ -32,7 +32,7 @@ export function ChipGroup<T extends string>({
             accessibilityState={{ selected: isActive }}
             onPress={() => onChange(option.value)}
             className={[
-              'rounded-full border px-4 py-2',
+              'rounded-full border px-4 py-2 active:opacity-80',
               isActive
                 ? 'border-primary bg-primary'
                 : 'border-line bg-surface active:bg-surface-subtle',

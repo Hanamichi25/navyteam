@@ -43,8 +43,8 @@ export default function ProfileScreen(): React.JSX.Element {
         contentContainerClassName="px-5 pb-8 gap-6"
         showsVerticalScrollIndicator={false}
       >
-        <View className="items-center gap-2 pt-2">
-          <Avatar uri={user.avatarUrl} size={88} />
+        <View className="items-center gap-2 rounded-2xl bg-primary-light p-6">
+          <Avatar uri={user.avatarUrl} size={92} ring />
           <Text className="text-xl font-extrabold text-ink">{user.name}</Text>
           <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
             Entrenador Personal

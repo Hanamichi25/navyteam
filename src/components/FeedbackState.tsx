@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
+
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface FeedbackStateProps {
@@ -24,7 +26,7 @@ export function FeedbackState({
   if (variant === 'loading') {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color="#2563EB" />
+        <ActivityIndicator color={COLORS.primary} />
       </View>
     );
   }
@@ -33,7 +35,7 @@ export function FeedbackState({
 
   return (
     <View className="flex-1 items-center justify-center gap-3 px-8">
-      <Ionicons name={iconName ?? fallback.icon} size={40} color="#94A3B8" />
+      <Ionicons name={iconName ?? fallback.icon} size={40} color={COLORS.inkFaint} />
       <Text className="text-center text-base text-ink-muted">
         {message ?? fallback.message}
       </Text>

@@ -28,7 +28,7 @@ export function ExerciseBlockRow({
   onRemove,
 }: ExerciseBlockRowProps): React.JSX.Element {
   return (
-    <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
+    <View className="gap-3 rounded-xl border border-line bg-surface-subtle p-4">
       <View className="flex-row items-start justify-between gap-2">
         <Text className="flex-1 text-sm font-bold text-ink">{exerciseName}</Text>
         <View className="flex-row items-center gap-1">

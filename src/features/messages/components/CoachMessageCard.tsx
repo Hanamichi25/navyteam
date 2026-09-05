@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import { useThread } from '../hooks/useMessages';
 
 interface CoachMessageCardProps {
@@ -44,7 +45,7 @@ export function CoachMessageCard({
     >
       <View className="flex-row items-center gap-2">
         <View className="h-8 w-8 items-center justify-center rounded-full bg-primary-light">
-          <Ionicons name="chatbubble-ellipses" size={16} color="#2563EB" />
+          <Ionicons name="chatbubble-ellipses" size={16} color={COLORS.primary} />
         </View>
         <Text className="flex-1 text-xs font-bold uppercase tracking-wide text-ink-faint">
           Mensaje de tu entrenador

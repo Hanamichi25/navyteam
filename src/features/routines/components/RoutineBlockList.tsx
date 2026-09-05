@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import type { RoutineBlock } from '@/types/routine';
 
 interface RoutineBlockListProps {
@@ -25,7 +26,7 @@ export function RoutineBlockList({
       {blocks.map((block, index) => (
         <View
           key={block.id}
-          className="gap-2 rounded-2xl border border-line bg-surface-subtle p-4"
+          className="gap-2 rounded-xl border border-line bg-surface-subtle p-4"
         >
           <View className="flex-row items-center gap-2">
             <View className="h-6 w-6 items-center justify-center rounded-full bg-primary-light">
@@ -42,12 +43,12 @@ export function RoutineBlockList({
             </Text>
             {block.suggestedLoad ? (
               <View className="flex-row items-center gap-1">
-                <Ionicons name="barbell-outline" size={13} color="#64748B" />
+                <Ionicons name="barbell-outline" size={13} color={COLORS.inkMuted} />
                 <Text className="text-sm text-ink-muted">{block.suggestedLoad}</Text>
               </View>
             ) : null}
             <View className="flex-row items-center gap-1">
-              <Ionicons name="time-outline" size={13} color="#64748B" />
+              <Ionicons name="time-outline" size={13} color={COLORS.inkMuted} />
               <Text className="text-sm text-ink-muted">{block.restSec} s descanso</Text>
             </View>
           </View>

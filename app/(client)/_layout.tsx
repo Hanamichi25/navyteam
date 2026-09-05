@@ -4,6 +4,7 @@ import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/features/auth';
+import { COLORS } from '@/lib/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -32,15 +33,17 @@ export default function ClientLayout(): React.JSX.Element {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.inkFaint,
         tabBarStyle: {
-          borderTopColor: '#E2E8F0',
+          borderTopColor: COLORS.line,
           height: 76 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        // fontWeight no sintetiza Manrope (fuente custom, un archivo por peso):
+        // fontFamily explícito, igual que las clases font-* de NativeWind.
+        tabBarLabelStyle: { fontSize: 11, fontFamily: 'Manrope_700Bold' },
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >

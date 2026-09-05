@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { FeedbackState } from '@/components/FeedbackState';
+import { COLORS } from '@/lib/colors';
 import type { Message, MessageSender } from '@/types/message';
 
 import { useSendMessage, useThread } from '../hooks/useMessages';
@@ -139,7 +140,7 @@ export function MessageThread({
         <TextInput
           className="max-h-28 flex-1 rounded-2xl border border-line bg-surface-field px-3.5 py-2.5 text-base text-ink"
           placeholder="Escribe un mensaje…"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.inkFaint}
           value={draft}
           onChangeText={setDraft}
           multiline
@@ -156,7 +157,7 @@ export function MessageThread({
           <Ionicons
             name="send"
             size={18}
-            color={draft.trim() === '' ? '#93B4F5' : '#FFFFFF'}
+            color={draft.trim() === '' ? COLORS.primary : '#FFFFFF'}
           />
         </Pressable>
       </View>

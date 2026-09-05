@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import type { AssignedRoutine } from '@/types/client';
 
 interface AssignedRoutineRowProps {
@@ -14,9 +15,9 @@ export function AssignedRoutineRow({
   onRemove,
 }: AssignedRoutineRowProps): React.JSX.Element {
   return (
-    <View className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-3">
-      <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary-light">
-        <Ionicons name="barbell-outline" size={18} color="#2563EB" />
+    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface-subtle p-3">
+      <View className="h-10 w-10 items-center justify-center rounded-lg bg-primary-light">
+        <Ionicons name="barbell-outline" size={18} color={COLORS.primary} />
       </View>
       <View className="flex-1">
         <Text className="text-sm font-bold text-ink">{routine.name}</Text>

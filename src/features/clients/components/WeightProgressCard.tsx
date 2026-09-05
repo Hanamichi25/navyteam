@@ -14,14 +14,15 @@ function computeFraction({ startKg, currentKg, goalKg }: WeightProgress): number
   return (startKg - currentKg) / total;
 }
 
-/** Card "Progreso de peso" del perfil de cliente. */
+/**
+ * Barra de avance entre el peso inicial y la meta. Pensado para ir dentro de
+ * un `CollapsibleSection` — sin contenedor propio.
+ */
 export function WeightProgressCard({
   progress,
 }: WeightProgressCardProps): React.JSX.Element {
   return (
-    <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
-      <Text className="text-sm font-bold text-ink">Progreso de peso</Text>
-
+    <View className="gap-3">
       <ProgressBar progress={computeFraction(progress)} />
 
       <View className="flex-row justify-between">

@@ -4,7 +4,7 @@
  * implementación real de servidor que quiera calcular lo mismo en cliente.
  */
 
-import { parseDdMmAaaa, weekdayIndexMonday } from '@/lib/date';
+import { monthDayShort, parseDdMmAaaa, weekdayIndexMonday, weekdayNameEs } from '@/lib/date';
 import type {
   ClientTrainingSummary,
   ExerciseLog,
@@ -199,4 +199,71 @@ export function weekdaysTrainedThisWeek(
     if (date && weekIndex(date) === thisWeek) days.add(weekdayIndexMonday(date));
   }
   return [...days].sort((a, b) => a - b);
+}
+
+/** Periodo del historial de "Mis entrenos": semana o mes en curso. */
+export type WorkoutHistoryPeriod = 'week' | 'month';
+
+/**
+ * Filtra sesiones (o resúmenes) al periodo en curso (semana o mes), más
+ * reciente primero. Las de fecha inválida se descartan.
+ */
+export function filterSessionsByPeriod<T extends { date: string }>(
+  items: readonly T[],
+  period: WorkoutHistoryPeriod,
+  now: Date = new Date(),
+): T[] {
+  const thisWeek = weekIndex(now);
+  return items
+    .map((item) => ({ item, date: parseDdMmAaaa(item.date) }))
+    .filter((entry): entry is { item: T; date: Date } => {
+      if (!entry.date) return false;
+      return period === 'week'
+        ? weekIndex(entry.date) === thisWeek
+        : entry.date.getMonth() === now.getMonth() &&
+            entry.date.getFullYear() === now.getFullYear();
+    })
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .map((entry) => entry.item);
+}
+
+/** Un grupo de sesiones bajo una misma etiqueta de día ("Hoy", "Ayer", "Lun 2 sep"). */
+export interface SessionDayGroup<T> {
+  label: string;
+  items: T[];
+}
+
+/** Etiqueta de día relativa a hoy: "Hoy", "Ayer", o "Lun 2 sep". */
+function dayLabel(item: { date: string }, date: Date, now: Date): string {
+  const startOf = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOf(now) - startOf(date)) / 86_400_000);
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === 1) return 'Ayer';
+  const dayName = weekdayNameEs(weekdayIndexMonday(date));
+  const capitalized = `${dayName.charAt(0).toUpperCase()}${dayName.slice(1, 3)}`;
+  const short = monthDayShort(item.date);
+  return short ? `${capitalized} ${short.day} ${short.month}` : capitalized;
+}
+
+/**
+ * Agrupa sesiones (ya ordenadas más reciente primero) por día, con una
+ * etiqueta relativa a hoy. Asume `items` con `date` válida en `dd/mm/aaaa`.
+ */
+export function groupSessionsByDay<T extends { date: string }>(
+  items: readonly T[],
+  now: Date = new Date(),
+): SessionDayGroup<T>[] {
+  const groups: SessionDayGroup<T>[] = [];
+  for (const item of items) {
+    const date = parseDdMmAaaa(item.date);
+    if (!date) continue;
+    const label = dayLabel(item, date, now);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.items.push(item);
+    } else {
+      groups.push({ label, items: [item] });
+    }
+  }
+  return groups;
 }

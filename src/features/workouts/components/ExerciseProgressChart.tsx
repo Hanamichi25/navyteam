@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-gifted-charts';
 import { Text, useWindowDimensions, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import type { ExerciseProgress } from '@/types/workout';
 
 /** px de padding horizontal a descontar: `px-5` de la pantalla + `p-4` de la card. */
@@ -13,9 +14,11 @@ interface ExerciseProgressChartProps {
 
 function PrTile({ value, label }: { value: string; label: string }): React.JSX.Element {
   return (
-    <View className="flex-1 items-center rounded-2xl border border-line bg-surface-subtle px-2 py-3">
+    <View className="flex-1 items-center rounded-xl border border-line bg-surface-subtle px-2 py-3">
       <Text className="text-base font-extrabold text-ink">{value}</Text>
-      <Text className="mt-0.5 text-center text-xs text-ink-muted">{label}</Text>
+      <Text className="mt-0.5 text-center text-xs font-semibold uppercase tracking-wide text-ink-faint">
+        {label}
+      </Text>
     </View>
   );
 }
@@ -29,8 +32,8 @@ export function ExerciseProgressChart({
 
   if (progress.points.length === 0) {
     return (
-      <View className="items-center justify-center gap-2 rounded-2xl border border-line bg-surface-subtle p-6">
-        <Ionicons name="barbell-outline" size={28} color="#94A3B8" />
+      <View className="items-center justify-center gap-2 rounded-xl border border-line bg-surface-subtle p-6">
+        <Ionicons name="barbell-outline" size={28} color={COLORS.inkFaint} />
         <Text className="text-center text-sm text-ink-muted">
           Sin series registradas de este ejercicio todavía.
         </Text>
@@ -45,19 +48,19 @@ export function ExerciseProgressChart({
 
   return (
     <View className="gap-4">
-      <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
+      <View className="gap-3 rounded-xl border border-line bg-surface-subtle p-4">
         <Text className="text-sm font-bold text-ink">1RM estimado (Epley)</Text>
         <View className="items-center pt-2">
           <LineChart
             data={data}
             width={chartWidth}
             height={160}
-            color="#2563EB"
+            color={COLORS.primary}
             thickness={2}
             curved
-            dataPointsColor="#2563EB"
-            yAxisTextStyle={{ color: '#94A3B8', fontSize: 10 }}
-            xAxisLabelTextStyle={{ color: '#94A3B8', fontSize: 10 }}
+            dataPointsColor={COLORS.primary}
+            yAxisTextStyle={{ color: COLORS.inkFaint, fontSize: 10 }}
+            xAxisLabelTextStyle={{ color: COLORS.inkFaint, fontSize: 10 }}
             yAxisColor="#E2E8F0"
             xAxisColor="#E2E8F0"
             rulesColor="#E2E8F0"

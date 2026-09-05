@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { COLORS } from '@/lib/colors';
 import type { Achievement } from '@/types/dashboard';
 
 import { ACHIEVEMENT_KIND_META } from '../labels';
@@ -24,7 +25,7 @@ export function AchievementRow({ item, onPress }: AchievementRowProps): React.JS
       accessibilityRole="button"
       accessibilityLabel={`${item.clientName}: ${item.detail}`}
       onPress={onPress}
-      className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-3 active:bg-surface-field"
+      className="flex-row items-center gap-3 rounded-xl border border-line bg-surface-subtle p-3 active:bg-surface-field"
     >
       <Avatar uri={item.clientAvatarUrl} size={38} />
       <View className="flex-1">
@@ -38,7 +39,7 @@ export function AchievementRow({ item, onPress }: AchievementRowProps): React.JS
       <View className={`h-7 w-7 items-center justify-center rounded-full ${meta.bg}`}>
         <Ionicons name={meta.icon} size={14} color={meta.fg} />
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+      <Ionicons name="chevron-forward" size={16} color={COLORS.inkFaint} />
     </Pressable>
   );
 }

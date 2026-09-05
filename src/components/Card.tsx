@@ -10,7 +10,7 @@ interface CardProps {
 /** Contenedor blanco con borde sutil y esquinas redondeadas usado en el dashboard. */
 export function Card({ children, className = '' }: CardProps): React.JSX.Element {
   return (
-    <View className={`rounded-2xl border border-line bg-surface p-4 ${className}`}>
+    <View className={`rounded-xl border border-line bg-surface p-4 ${className}`}>
       {children}
     </View>
   );

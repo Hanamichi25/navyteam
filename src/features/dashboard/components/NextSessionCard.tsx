@@ -13,7 +13,7 @@ export function NextSessionCard({
   onPress,
 }: NextSessionCardProps): React.JSX.Element {
   return (
-    <View className="flex-row items-center gap-3 rounded-2xl bg-primary-light p-3.5">
+    <View className="flex-row items-center gap-3 rounded-xl bg-primary-light p-3.5">
       <View className="items-center">
         <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
           Hoy

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { COLORS } from '@/lib/colors';
 import type { UpcomingSession } from '@/types/dashboard';
 
 interface SessionRowProps {
@@ -21,7 +22,7 @@ export function SessionRow({
   onViewProfile,
 }: SessionRowProps): React.JSX.Element {
   return (
-    <View className="rounded-2xl border border-line bg-surface-subtle p-3">
+    <View className="rounded-xl border border-line bg-surface-subtle p-3">
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
@@ -42,7 +43,7 @@ export function SessionRow({
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color="#94A3B8"
+          color={COLORS.inkFaint}
         />
       </Pressable>
 

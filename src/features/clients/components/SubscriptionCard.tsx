@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
-import { Badge } from '@/components/Badge';
 import type { ClientDetail } from '@/types/client';
 
-import { SUBSCRIPTION_STATUS_META, subscriptionStatus } from '../subscription';
+import { subscriptionStatus } from '../subscription';
 
 interface SubscriptionCardProps {
   client: ClientDetail;
@@ -12,22 +11,20 @@ interface SubscriptionCardProps {
   onRegisterPayment: () => void;
 }
 
-/** Card de la suscripción del cliente en su perfil: estado, cuota y pagos. */
+/**
+ * Detalle de la suscripción del cliente: estado + cuota, "Registrar pago" y
+ * los últimos pagos. Pensado para ir dentro de un `CollapsibleSection` — el
+ * resumen del header (estado + vigencia) lo arma quien lo use.
+ */
 export function SubscriptionCard({
   client,
   onRegisterPayment,
 }: SubscriptionCardProps): React.JSX.Element {
   const status = subscriptionStatus(client.subscriptionUntil);
-  const meta = SUBSCRIPTION_STATUS_META[status];
   const recentPayments = [...client.payments].reverse().slice(0, 3);
 
   return (
-    <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-bold text-ink">Suscripción</Text>
-        <Badge label={meta.label} tone={meta.tone} />
-      </View>
-
+    <View className="gap-3">
       <View className="flex-row justify-between">
         <View className="gap-0.5">
           <Text className="text-xs text-ink-faint">

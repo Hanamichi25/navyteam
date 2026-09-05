@@ -1,20 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { FeedbackState } from '@/components/FeedbackState';
 import { MetricTile } from '@/components/MetricTile';
+import { PeriodToggle } from '@/components/PeriodToggle';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   AssignedRoutineRow,
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
-  MeasurementHistoryList,
+  SUBSCRIPTION_STATUS_META,
   SubscriptionCard,
+  subscriptionStatus,
   useClient,
   useUnassignPlanFromClient,
   useUnassignRoutineFromClient,
@@ -22,12 +26,16 @@ import {
   WeightProgressCard,
 } from '@/features/clients';
 import { useThread } from '@/features/messages';
+import { COLORS } from '@/lib/colors';
 import {
+  filterSessionsByPeriod,
+  groupSessionsByDay,
   SessionSummaryRow,
   TrainedExerciseRow,
   TrainingSummaryCard,
   useClientWorkouts,
   useTrainedExercises,
+  type WorkoutHistoryPeriod,
 } from '@/features/workouts';
 import { computeAge } from '@/lib/date';
 
@@ -40,6 +48,11 @@ const TABS: readonly { value: ProfileTab; label: string }[] = [
   { value: 'messages', label: 'Mensajes' },
 ];
 
+const WORKOUT_PERIOD_OPTIONS: readonly { value: WorkoutHistoryPeriod; label: string }[] = [
+  { value: 'week', label: 'Semana' },
+  { value: 'month', label: 'Mes' },
+];
+
 export default function ClientProfileScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +63,12 @@ export default function ClientProfileScreen(): React.JSX.Element {
   const trainedExercises = useTrainedExercises(id);
   const thread = useThread(id);
   const [tab, setTab] = useState<ProfileTab>('routines');
+  const [workoutPeriod, setWorkoutPeriod] = useState<WorkoutHistoryPeriod>('week');
+
+  const workoutGroups = useMemo(() => {
+    if (workouts.status !== 'ready') return [];
+    return groupSessionsByDay(filterSessionsByPeriod(workouts.data, workoutPeriod));
+  }, [workouts, workoutPeriod]);
 
   const lastMessage =
     thread.status === 'ready' && thread.data.length > 0
@@ -80,50 +99,69 @@ export default function ClientProfileScreen(): React.JSX.Element {
             contentContainerClassName="px-5 pb-6 gap-5"
             showsVerticalScrollIndicator={false}
           >
-            <View className="items-center gap-2 pt-2">
-              <Avatar uri={client.data.avatarUrl} size={88} />
-              <Text className="text-xl font-extrabold text-ink">
-                {client.data.name}
-              </Text>
-              <Badge
-                label={CLIENT_GOAL_LABEL[client.data.goal]}
-                tone={CLIENT_GOAL_TONE[client.data.goal]}
-                align="center"
-              />
-              <Text className="text-xs text-ink-faint">
-                Miembro desde: {client.data.memberSince}
-                {computeAge(client.data.birthDate) !== null
-                  ? ` · ${computeAge(client.data.birthDate)} años`
-                  : ''}
-              </Text>
+            <View className="gap-4 rounded-2xl bg-primary-light p-5">
+              <View className="items-center gap-2">
+                <Avatar uri={client.data.avatarUrl} size={88} ring />
+                <Text className="text-xl font-extrabold text-ink">
+                  {client.data.name}
+                </Text>
+                <Badge
+                  label={CLIENT_GOAL_LABEL[client.data.goal]}
+                  tone={CLIENT_GOAL_TONE[client.data.goal]}
+                  align="center"
+                />
+                <Text className="text-xs text-ink-faint">
+                  Miembro desde: {client.data.memberSince}
+                  {computeAge(client.data.birthDate) !== null
+                    ? ` · ${computeAge(client.data.birthDate)} años`
+                    : ''}
+                </Text>
+              </View>
+
+              <View className="flex-row gap-3">
+                <MetricTile value={`${client.data.weightKg} kg`} label="Peso" />
+                <MetricTile value={`${client.data.heightCm} cm`} label="Altura" />
+                <MetricTile value={client.data.bmi.toFixed(1)} label="IMC" />
+              </View>
             </View>
 
-            <View className="flex-row gap-3">
-              <MetricTile value={`${client.data.weightKg} kg`} label="Peso" />
-              <MetricTile value={`${client.data.heightCm} cm`} label="Altura" />
-              <MetricTile value={client.data.bmi.toFixed(1)} label="IMC" />
-            </View>
-
-            <SubscriptionCard
-              client={client.data}
-              onRegisterPayment={() =>
-                router.push(`/(app)/(tabs)/clients/${id}/register-payment`)
+            <CollapsibleSection
+              title="Suscripción"
+              iconName="card-outline"
+              headerRight={
+                <Badge
+                  label={SUBSCRIPTION_STATUS_META[subscriptionStatus(client.data.subscriptionUntil)].label}
+                  tone={SUBSCRIPTION_STATUS_META[subscriptionStatus(client.data.subscriptionUntil)].tone}
+                  className="mr-1"
+                />
               }
-            />
-
-            <WeightProgressCard progress={client.data.weightProgress} />
-
-            <WeightEvolutionChart measurements={client.data.measurements} />
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push(`/(app)/(tabs)/clients/${id}/add-measurement`)}
-              className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
             >
-              <Text className="text-sm font-semibold text-primary">+ Agregar medición</Text>
-            </Pressable>
+              <SubscriptionCard
+                client={client.data}
+                onRegisterPayment={() =>
+                  router.push(`/(app)/(tabs)/clients/${id}/register-payment`)
+                }
+              />
+            </CollapsibleSection>
 
-            <MeasurementHistoryList measurements={client.data.measurements} />
+            <CollapsibleSection
+              title="Peso"
+              iconName="trending-up-outline"
+              summary={`${client.data.weightProgress.currentKg} kg`}
+            >
+              <WeightProgressCard progress={client.data.weightProgress} />
+              <WeightEvolutionChart measurements={client.data.measurements} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push(`/(app)/(tabs)/clients/${id}/measurements`)}
+                className="flex-row items-center justify-center gap-1.5 py-1"
+              >
+                <Text className="text-sm font-semibold text-primary">
+                  Ver historial de mediciones
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+              </Pressable>
+            </CollapsibleSection>
 
             <TrainingSummaryCard clientId={id} />
 
@@ -131,16 +169,22 @@ export default function ClientProfileScreen(): React.JSX.Element {
               {TABS.map((item) => {
                 const active = item.value === tab;
                 return (
-                  <Text
+                  <Pressable
                     key={item.value}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
                     onPress={() => setTab(item.value)}
-                    numberOfLines={1}
-                    className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold ${
-                      active ? 'bg-surface text-primary' : 'text-ink-muted'
-                    }`}
+                    className="flex-1"
                   >
-                    {item.label}
-                  </Text>
+                    <Text
+                      numberOfLines={1}
+                      className={`rounded-xl py-2 text-center text-xs font-semibold ${
+                        active ? 'bg-surface text-primary' : 'text-ink-muted'
+                      }`}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
                 );
               })}
             </View>
@@ -217,22 +261,40 @@ export default function ClientProfileScreen(): React.JSX.Element {
                   <Text className="text-sm font-semibold text-primary">+ Registrar sesión</Text>
                 </Pressable>
 
-                <Text className="mt-1 text-sm font-bold text-ink">Historial</Text>
+                <View className="mt-1 flex-row items-center justify-between">
+                  <Text className="text-sm font-bold text-ink">Historial</Text>
+                  <PeriodToggle
+                    options={WORKOUT_PERIOD_OPTIONS}
+                    value={workoutPeriod}
+                    onChange={setWorkoutPeriod}
+                  />
+                </View>
                 {workouts.status === 'loading' ? (
                   <Text className="text-sm text-ink-faint">Cargando…</Text>
                 ) : workouts.status === 'error' ? (
                   <Text className="text-sm text-red-500">{workouts.error}</Text>
-                ) : workouts.data.length === 0 ? (
-                  <Text className="text-sm text-ink-muted">Sin sesiones registradas.</Text>
+                ) : workoutGroups.length === 0 ? (
+                  <Text className="text-sm text-ink-muted">
+                    {workoutPeriod === 'week'
+                      ? 'Sin sesiones esta semana.'
+                      : 'Sin sesiones este mes.'}
+                  </Text>
                 ) : (
-                  workouts.data.map((summary) => (
-                    <SessionSummaryRow
-                      key={summary.id}
-                      summary={summary}
-                      onPress={() =>
-                        router.push(`/(app)/(tabs)/clients/${id}/session/${summary.id}`)
-                      }
-                    />
+                  workoutGroups.map((group) => (
+                    <View key={group.label} className="gap-2">
+                      <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
+                        {group.label}
+                      </Text>
+                      {group.items.map((summary) => (
+                        <SessionSummaryRow
+                          key={summary.id}
+                          summary={summary}
+                          onPress={() =>
+                            router.push(`/(app)/(tabs)/clients/${id}/session/${summary.id}`)
+                          }
+                        />
+                      ))}
+                    </View>
                   ))
                 )}
 

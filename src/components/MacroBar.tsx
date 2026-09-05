@@ -11,8 +11,8 @@ export function MacroBar({ macros }: MacroBarProps): React.JSX.Element {
   return (
     <View className="h-2 w-full flex-row overflow-hidden rounded-full bg-line">
       <View className="h-full bg-primary" style={{ width: `${macros.proteinPct}%` }} />
-      <View className="h-full bg-blue-400" style={{ width: `${macros.carbsPct}%` }} />
-      <View className="h-full bg-blue-200" style={{ width: `${macros.fatPct}%` }} />
+      <View className="h-full bg-sky-400" style={{ width: `${macros.carbsPct}%` }} />
+      <View className="h-full bg-gold-light" style={{ width: `${macros.fatPct}%` }} />
     </View>
   );
 }

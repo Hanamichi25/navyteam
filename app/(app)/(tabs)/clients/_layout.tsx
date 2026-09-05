@@ -14,6 +14,7 @@ export default function ClientsLayout(): React.JSX.Element {
       <Stack.Screen name="[id]/register-payment" options={{ presentation: 'modal' }} />
       <Stack.Screen name="[id]/log-session" options={{ presentation: 'modal' }} />
       <Stack.Screen name="[id]/messages" />
+      <Stack.Screen name="[id]/measurements" />
       <Stack.Screen name="[id]/session/[sessionId]" />
       <Stack.Screen name="[id]/progress/[exerciseId]" />
     </Stack>

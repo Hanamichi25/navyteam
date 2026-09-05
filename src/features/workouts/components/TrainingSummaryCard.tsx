@@ -1,5 +1,6 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import { monthDayShort, WEEKDAY_LETTERS, weekdayIndexMonday } from '@/lib/date';
 
 import { useClientTrainingSummary } from '../hooks/useWorkouts';
@@ -91,7 +92,7 @@ export function TrainingSummaryCard({
       </Text>
 
       {summary.status === 'loading' ? (
-        <ActivityIndicator color="#2563EB" />
+        <ActivityIndicator color={COLORS.primary} />
       ) : summary.status === 'error' ? (
         <Text className="text-xs text-ink-muted">{summary.error}</Text>
       ) : summary.data.totalSessions === 0 ? (

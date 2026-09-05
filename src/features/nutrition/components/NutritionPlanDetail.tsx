@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 
 import { Badge } from '@/components/Badge';
 import { MacroBar } from '@/components/MacroBar';
+import { COLORS } from '@/lib/colors';
 import type { NutritionPlan } from '@/types/nutrition';
 
 import { NUTRITION_CATEGORY_LABEL, NUTRITION_CATEGORY_TONE } from '../labels';
@@ -50,9 +51,9 @@ export function NutritionPlanDetail({
         <Text className="text-xl font-extrabold text-ink">{plan.name}</Text>
       </View>
 
-      <View className="flex-row items-center gap-3 rounded-2xl bg-primary-light p-4">
+      <View className="flex-row items-center gap-3 rounded-xl bg-primary-light p-4">
         <View className="h-11 w-11 items-center justify-center rounded-full bg-surface">
-          <Ionicons name="flame-outline" size={22} color="#2563EB" />
+          <Ionicons name="flame-outline" size={22} color={COLORS.primary} />
         </View>
         <View>
           <Text className="text-2xl font-extrabold text-primary-dark">

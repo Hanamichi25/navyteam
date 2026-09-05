@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/features/auth';
 import { confirm } from '@/lib/confirm';
+import { COLORS } from '@/lib/colors';
 import { Avatar } from './Avatar';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -53,7 +54,7 @@ function DrawerItem({
       onPress={onPress}
       className={`flex-row items-center gap-4 rounded-xl px-4 py-2.5 ${active ? 'bg-primary-light' : 'active:bg-surface-subtle'}`}
     >
-      <Ionicons name={link.icon} size={22} color={active ? '#2563EB' : '#334155'} />
+      <Ionicons name={link.icon} size={22} color={active ? COLORS.primary : '#334155'} />
       <Text
         className={`flex-1 text-base ${active ? 'font-bold text-primary' : 'font-medium text-ink'}`}
       >

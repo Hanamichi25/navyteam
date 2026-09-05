@@ -7,13 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { ChipGroup } from '@/components/ChipGroup';
 import { FeedbackState } from '@/components/FeedbackState';
+import { PeriodToggle } from '@/components/PeriodToggle';
 import { useAuthStore } from '@/features/auth';
 import {
   AchievementRow,
   ACTIVITY_FILTERS,
   ActivityRow,
   NextSessionCard,
-  PeriodToggle,
   SessionRow,
   StatCard,
   useDashboardData,
@@ -22,6 +22,11 @@ import {
 import { todayShortLabel } from '@/lib/date';
 import { openDrawer } from '@/lib/openDrawer';
 import type { DashboardPeriod } from '@/types/dashboard';
+
+const PERIOD_OPTIONS: readonly { value: DashboardPeriod; label: string }[] = [
+  { value: 'week', label: 'Semana' },
+  { value: 'month', label: 'Mes' },
+];
 
 export default function DashboardScreen(): React.JSX.Element {
   const navigation = useNavigation();
@@ -112,7 +117,11 @@ export default function DashboardScreen(): React.JSX.Element {
           <View className="gap-3 px-5">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-bold text-ink">Resumen</Text>
-              <PeriodToggle value={period} onChange={setPeriod} />
+              <PeriodToggle
+                options={PERIOD_OPTIONS}
+                value={period}
+                onChange={setPeriod}
+              />
             </View>
             <View className="flex-row gap-2.5">
               {dashboard.data.stats[period].map((stat) => (

@@ -62,26 +62,26 @@ export default function ClientAccountScreen(): React.JSX.Element {
         contentContainerClassName="gap-5 px-5 pb-8 pt-4"
         showsVerticalScrollIndicator={false}
       >
-        <View className="items-center gap-2">
-          <Avatar uri={user.avatarUrl} size={88} />
+        <View className="items-center gap-2 rounded-2xl bg-primary-light p-6">
+          <Avatar uri={user.avatarUrl} size={92} ring />
           <Text className="text-xl font-extrabold text-ink">{user.name}</Text>
-          <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
-            Cliente
-          </Text>
+          <Badge label="Cliente" tone="primary" align="center" />
           <Text className="text-sm text-ink-muted">{user.email}</Text>
         </View>
 
         {detail ? (
           <>
-            <View className="flex-row rounded-2xl border border-line bg-surface-subtle px-2 py-4">
+            <View className="flex-row rounded-xl bg-surface-subtle px-2 py-4">
               <Stat value={CLIENT_GOAL_LABEL[detail.goal]} label="objetivo" />
               <View className="w-px self-stretch bg-line" />
               <Stat value={detail.memberSince} label="miembro desde" />
             </View>
 
-            <View className="flex-row items-center justify-between rounded-2xl border border-line bg-surface-subtle p-4">
+            <View className="flex-row items-center justify-between rounded-xl bg-surface-subtle p-4">
               <View className="gap-0.5">
-                <Text className="text-xs text-ink-faint">Suscripción</Text>
+                <Text className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                  Suscripción
+                </Text>
                 <Text className="text-sm font-semibold text-ink">
                   {detail.subscriptionUntil
                     ? `${subStatus === 'expired' ? 'Venció el' : 'Vigente hasta'} ${detail.subscriptionUntil}`
@@ -105,7 +105,12 @@ export default function ClientAccountScreen(): React.JSX.Element {
           />
         </View>
 
-        <Text className="self-center text-xs text-ink-faint">NavyTeam v1.0</Text>
+        <View className="items-center gap-1 pt-2">
+          <Text className="text-xs font-semibold uppercase tracking-widest text-ink-faint">
+            NavyTeam
+          </Text>
+          <Text className="text-xs text-ink-faint">v1.0</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

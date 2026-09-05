@@ -14,6 +14,7 @@ import {
   TodayRoutineCard,
   WeekScheduleStrip,
 } from '@/features/routines';
+import { COLORS } from '@/lib/colors';
 import { weekdayNameEs } from '@/lib/date';
 import { parseSchedule } from '@/lib/schedule';
 
@@ -72,8 +73,8 @@ export default function ClientHomeScreen(): React.JSX.Element {
           />
 
           {routines.length === 0 ? (
-            <View className="items-center gap-2 rounded-2xl border border-line bg-surface-subtle p-6">
-              <Ionicons name="barbell-outline" size={28} color="#94A3B8" />
+            <View className="items-center gap-2 rounded-xl bg-surface-subtle p-6">
+              <Ionicons name="barbell-outline" size={28} color={COLORS.inkFaint} />
               <Text className="text-center text-sm text-ink-muted">
                 Tu entrenador todavía no te ha asignado ninguna rutina.
               </Text>
@@ -107,7 +108,7 @@ export default function ClientHomeScreen(): React.JSX.Element {
                   return (
                     <View
                       key={routine.id}
-                      className="gap-3 rounded-2xl border border-line bg-surface-subtle p-3"
+                      className="gap-3 rounded-xl bg-surface-subtle p-3"
                     >
                       <Pressable
                         accessibilityRole="button"
@@ -120,7 +121,7 @@ export default function ClientHomeScreen(): React.JSX.Element {
                         className="flex-row items-center gap-3"
                       >
                         <View className="h-10 w-10 items-center justify-center rounded-full bg-primary-light">
-                          <Ionicons name="barbell-outline" size={20} color="#2563EB" />
+                          <Ionicons name="barbell-outline" size={20} color={COLORS.primary} />
                         </View>
                         <View className="flex-1">
                           <Text className="text-base font-bold text-ink">{routine.name}</Text>
@@ -131,7 +132,7 @@ export default function ClientHomeScreen(): React.JSX.Element {
                         <Ionicons
                           name={open ? 'chevron-up' : 'chevron-down'}
                           size={18}
-                          color="#94A3B8"
+                          color={COLORS.inkFaint}
                         />
                       </Pressable>
 

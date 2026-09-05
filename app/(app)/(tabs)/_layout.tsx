@@ -3,6 +3,8 @@ import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { COLORS } from '@/lib/colors';
+
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function tabIcon(active: IoniconName, inactive: IoniconName) {
@@ -18,19 +20,21 @@ export default function TabsLayout(): React.JSX.Element {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.inkFaint,
         // Altura + paddings explícitos: cada tab item es un flex column (ícono +
         // label) con altura fija; el ícono tiene flexShrink:0, así que si no sobra
         // espacio de sobra, todo el "apriete" lo absorbe el label y el texto se
         // termina aplastando a unos pocos px (ilegible) en vez de crecer el alto.
         tabBarStyle: {
-          borderTopColor: '#E2E8F0',
+          borderTopColor: COLORS.line,
           height: 76 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        // fontWeight no sintetiza Manrope (fuente custom, un archivo por peso):
+        // fontFamily explícito, igual que las clases font-* de NativeWind.
+        tabBarLabelStyle: { fontSize: 11, fontFamily: 'Manrope_700Bold' },
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >

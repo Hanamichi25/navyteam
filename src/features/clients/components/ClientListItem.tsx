@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
+import { COLORS } from '@/lib/colors';
 import type { Client } from '@/types/client';
 import { CLIENT_GOAL_LABEL, CLIENT_GOAL_TONE } from '../labels';
 import { SUBSCRIPTION_STATUS_META, subscriptionStatus } from '../subscription';
@@ -19,13 +20,21 @@ export function ClientListItem({
 }: ClientListItemProps): React.JSX.Element {
   const subStatus = subscriptionStatus(client.subscriptionUntil);
   const showSubWarning = subStatus === 'expired' || subStatus === 'expiring';
+  const warningClasses =
+    subStatus === 'expired'
+      ? 'border-rose-200 bg-rose-50 active:bg-rose-100'
+      : 'border-amber-200 bg-amber-50 active:bg-amber-100';
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Ver perfil de ${client.name}`}
       onPress={onPress}
-      className="flex-row items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-3 active:bg-surface-field"
+      className={
+        showSubWarning
+          ? `flex-row items-center gap-3 rounded-xl border p-3 ${warningClasses}`
+          : 'flex-row items-center gap-3 rounded-xl bg-surface-subtle p-3 active:bg-surface-field'
+      }
     >
       <Avatar uri={client.avatarUrl} size={48} />
 
@@ -50,7 +59,7 @@ export function ClientListItem({
         <Text className="text-xs text-ink-faint">{client.lastActivity}</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+      <Ionicons name="chevron-forward" size={18} color={COLORS.inkFaint} />
     </Pressable>
   );
 }

@@ -31,7 +31,6 @@ export function MeasurementHistoryList({
 
   return (
     <View className="gap-2">
-      <Text className="text-sm font-bold text-ink">Historial de mediciones</Text>
       {sorted.map((measurement) => {
         const extra = extraMeasures(measurement);
         return (

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 import { Badge } from '@/components/Badge';
 import { formatMacros, MacroBar } from '@/components/MacroBar';
+import { COLORS } from '@/lib/colors';
 import type { NutritionPlan } from '@/types/nutrition';
-import { NUTRITION_CATEGORY_LABEL, NUTRITION_CATEGORY_TONE } from '../labels';
+import { NUTRITION_CATEGORY_ICON, NUTRITION_CATEGORY_LABEL, NUTRITION_CATEGORY_TONE } from '../labels';
 
 interface NutritionPlanCardProps {
   plan: NutritionPlan;
@@ -13,14 +15,27 @@ interface NutritionPlanCardProps {
 
 /** Tarjeta del catálogo de planes de alimentación. */
 export function NutritionPlanCard({ plan, onPress }: NutritionPlanCardProps): React.JSX.Element {
+  const [imageFailed, setImageFailed] = useState(false);
+
   const content = (
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <View>
-        <Image
-          source={{ uri: plan.imageUrl }}
-          className="h-32 w-full bg-surface-field"
-          resizeMode="cover"
-        />
+      <View className="h-32 w-full">
+        {imageFailed ? (
+          <View className="h-full w-full items-center justify-center bg-primary-light">
+            <Ionicons
+              name={NUTRITION_CATEGORY_ICON[plan.category]}
+              size={36}
+              color={COLORS.primary}
+            />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: plan.imageUrl }}
+            className="h-full w-full bg-surface-field"
+            resizeMode="cover"
+            onError={() => setImageFailed(true)}
+          />
+        )}
         <Badge
           label={NUTRITION_CATEGORY_LABEL[plan.category]}
           tone={NUTRITION_CATEGORY_TONE[plan.category]}
@@ -45,7 +60,7 @@ export function NutritionPlanCard({ plan, onPress }: NutritionPlanCardProps): Re
         </View>
 
         <View className="mt-1 flex-row items-center gap-1.5">
-          <Ionicons name="people-outline" size={15} color="#94A3B8" />
+          <Ionicons name="people-outline" size={15} color={COLORS.inkFaint} />
           <Text className="text-xs text-ink-faint">
             Asignado a {plan.assignedCount} usuarios
           </Text>

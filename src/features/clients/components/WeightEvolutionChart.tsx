@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-gifted-charts';
 import { Text, useWindowDimensions, View } from 'react-native';
 
+import { COLORS } from '@/lib/colors';
 import { parseDdMmAaaa } from '@/lib/date';
 import type { BodyMeasurement } from '@/types/client';
 
@@ -26,8 +27,8 @@ export function WeightEvolutionChart({
 
   if (measurements.length === 0) {
     return (
-      <View className="items-center justify-center gap-2 rounded-2xl border border-line bg-surface-subtle p-6">
-        <Ionicons name="trending-up-outline" size={28} color="#94A3B8" />
+      <View className="items-center justify-center gap-2 rounded-xl bg-surface-field p-6">
+        <Ionicons name="trending-up-outline" size={28} color={COLORS.inkFaint} />
         <Text className="text-center text-sm text-ink-muted">
           Sin mediciones todavía. Agrega la primera para ver la evolución de peso.
         </Text>
@@ -47,20 +48,22 @@ export function WeightEvolutionChart({
   }));
 
   return (
-    <View className="gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
-      <Text className="text-sm font-bold text-ink">Evolución de peso</Text>
+    <View className="gap-3">
+      <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
+        Evolución de peso
+      </Text>
 
       <View className="items-center pt-2">
         <LineChart
           data={data}
           width={chartWidth}
           height={160}
-          color="#2563EB"
+          color={COLORS.primary}
           thickness={2}
           curved
-          dataPointsColor="#2563EB"
-          yAxisTextStyle={{ color: '#94A3B8', fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: '#94A3B8', fontSize: 10 }}
+          dataPointsColor={COLORS.primary}
+          yAxisTextStyle={{ color: COLORS.inkFaint, fontSize: 10 }}
+          xAxisLabelTextStyle={{ color: COLORS.inkFaint, fontSize: 10 }}
           yAxisColor="#E2E8F0"
           xAxisColor="#E2E8F0"
           rulesColor="#E2E8F0"

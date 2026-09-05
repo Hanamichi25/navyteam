@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { LoginForm } from '@/features/auth/components/LoginForm';
+import { COLORS } from '@/lib/colors';
 
 function noop(): void {
   // TODO(backend): implementar OAuth social (Google / Apple) con expo-auth-session.
@@ -30,7 +31,7 @@ export default function LoginScreen(): React.JSX.Element {
         >
           <View className="mb-8 items-center">
             <View className="mb-5 h-16 w-16 items-center justify-center rounded-full bg-primary-light">
-              <Ionicons name="barbell-outline" size={30} color="#2563EB" />
+              <Ionicons name="barbell-outline" size={30} color={COLORS.primary} />
             </View>
             <Text className="text-3xl font-extrabold text-ink">NavyTeam</Text>
             <Text className="mt-1 text-base text-ink-muted">
