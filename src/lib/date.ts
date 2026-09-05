@@ -76,6 +76,51 @@ export function monthDayShort(value: string): { day: string; month: string } | n
   return { day: String(date.getDate()), month: MESES_CORTOS[date.getMonth()] ?? '' };
 }
 
+/** `dd/mm/aaaa` → `aaaa-mm-dd` (columna `date` de Postgres), o `null` si no tiene esa forma. */
+export function ddmmaaaaToIso(value: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+
+/** `aaaa-mm-dd` (o ISO completo) → `dd/mm/aaaa`. Devuelve el valor tal cual si no encaja. */
+export function isoToDdmmaaaa(value: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : value;
+}
+
+const MESES_MEMBER_SINCE = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+];
+
+/** `Date` → "Ene 2025" (mes de alta del cliente, para `ClientDetail.memberSince`). */
+export function formatMemberSince(date: Date): string {
+  return `${MESES_MEMBER_SINCE[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/**
+ * Etiqueta relativa corta para "última actividad" del cliente: "Hoy", "Ayer",
+ * "Hace 3 días", "Hace 2 semanas", o `fallback` si no hay fecha. Derivada del
+ * día del calendario, no de las horas exactas.
+ */
+export function relativeDayLabel(date: Date | null, fallback = 'Sin actividad aún'): string {
+  if (!date) return fallback;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
+
+  if (days <= 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `Hace ${days} días`;
+  if (days < 30) {
+    const weeks = Math.floor(days / 7);
+    return weeks === 1 ? 'Hace 1 semana' : `Hace ${weeks} semanas`;
+  }
+  const months = Math.floor(days / 30);
+  return months === 1 ? 'Hace 1 mes' : `Hace ${months} meses`;
+}
+
 /** Días de la semana con lunes = 0 … domingo = 6 (el orden que usan los horarios). */
 export const WEEKDAYS_ES = [
   'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',

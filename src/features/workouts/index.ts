@@ -16,8 +16,11 @@ export {
   useWorkoutSession,
 } from './hooks/useWorkouts';
 export {
+  buildExerciseProgress,
+  buildTrainingSummary,
   filterSessionsByPeriod,
   groupSessionsByDay,
+  listTrainedExercises,
   type SessionDayGroup,
   type WorkoutHistoryPeriod,
 } from './progress';

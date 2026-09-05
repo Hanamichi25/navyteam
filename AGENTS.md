@@ -427,14 +427,54 @@ flujo propio (el entrenador da de alta un cliente y esto crea su usuario) es Fas
 
 ---
 
-## Fase 10 — Conectar todos los Gateways a datos reales
+## Fase 10 — Conectar todos los Gateways a Supabase — CÓDIGO COMPLETO (pendiente aplicar migración + verificar)
 
-Con el proveedor elegido y `AuthGateway` real en marcha, migrar cada `*Gateway` mock a su
-implementación real: esquema de BD (clientes, medidas, ejercicios, rutinas, planes, sesiones,
-series), migraciones, y **permisos por rol**: un `client` solo lee/escribe **sus** datos
-(sus sesiones, su rutina/plan asignados); un `coach` accede a **sus** clientes y a todo lo que
-crea. Aquí es donde "cliente registra → entrenador lo ve" funciona de verdad entre dispositivos.
-Los mocks quedan como implementación de referencia para tests y desarrollo offline.
+Cada `*Gateway` mock tiene ahora su gemelo real sobre Supabase (Postgres + RLS), sin tocar las
+interfaces `Gateway` ni los hooks de React Query. Los mocks se conservan como implementación de
+referencia (offline / tests), igual que `authGateway.mock.ts`.
+
+**Qué se hizo:**
+1. **Supabase CLI** (`supabase` devDependency, `npx supabase init`). Esquema en
+   `supabase/migrations/0001_phase10_schema.sql`; semilla en `supabase/seed.sql` (porta los
+   `*.mock.ts` 1:1, resolviendo el `coach_id` por el email `entrenador@navyteam.com`).
+2. **Esquema `public`** (PK `text`, se siembran con los ids legibles de los mocks): `exercises`,
+   `routines` + `routine_blocks`, `nutrition_plans`, `clients` (+ columnas `subscription_until`,
+   `nutrition_plan_id`, `client_user_id`), `body_measurements`, `client_routines`, `payments`,
+   `workout_sessions` → `workout_exercise_logs` → `workout_set_logs`, `messages`. Fechas: las
+   columnas son `date`/`timestamptz`; los tipos de dominio siguen usando strings `dd/mm/aaaa`, la
+   conversión vive en el borde del Gateway (`ddmmaaaaToIso`/`isoToDdmmaaaa` en `src/lib/date.ts`).
+3. **RLS por rol**: helper `public.is_my_client(cid)` (SECURITY DEFINER). Coach = `coach_id =
+   auth.uid()` sobre sus catálogos y `is_my_client()` sobre lo de sus clientes. Cliente = solo
+   lectura de su ficha, su rutina/plan asignados y sus ejercicios; lectura + `insert` de sus
+   `workout_sessions` (y logs/sets), **sin** delete/update; lectura + `insert` de sus `messages`.
+4. **7 Gateways Supabase** en `src/features/<x>/supabase/<x>Gateway.supabase.ts`. Campos
+   derivados en lectura (ya no se almacenan): `Routine.exerciseCount`/`assignedCount` y
+   `NutritionPlan.assignedCount` (vía embeds `count` — **resuelve la desincronización del mock**);
+   peso vigente / IMC / `weightProgress` / `lastActivity` del cliente. Las lecturas derivadas de
+   `workouts` (progreso, adherencia) **reutilizan las funciones puras de `progress.ts`**.
+5. **Inyección**: `src/gateways/index.tsx` ramifica por `EXPO_PUBLIC_SUPABASE_URL` (mismo patrón
+   que `configureAuthGateway`): presente → Gateways Supabase; ausente → mocks.
+6. **Helpers nuevos**: `src/lib/supabaseQuery.ts` (`unwrap`/`unwrapRequired`/`unwrapList`),
+   `src/lib/date.ts#{formatMemberSince,relativeDayLabel,ddmmaaaaToIso,isoToDdmmaaaa}`.
+7. **Dashboard = composición real parcial**: `activeUsers`, `stats` (semana/mes con delta vs.
+   periodo anterior), `weeklyAchievements` (PRs de `progress.ts` con fecha ≤ 7 días + rachas) y
+   `recentActivity` (sesiones + mediciones + mensajes). `upcomingSessions` = `[]` — no hay modelo
+   de agenda de sesiones (hueco conocido).
+
+**Cómo aplicarlo (una vez):**
+```
+npx supabase login                 # token del dashboard
+npx supabase link --project-ref oqgknkxnmhzmxlntckck
+npx supabase db push               # aplica 0001_phase10_schema.sql
+# seed: pegar supabase/seed.sql en el SQL Editor (o psql "$DATABASE_URL" -f supabase/seed.sql)
+```
+Para el rol `client`: crear el usuario en el dashboard con
+`user_metadata { "role": "client", "client_id": "cli_luis" }` y descomentar el `update` final
+de `seed.sql` (enlaza `clients.client_user_id`).
+
+**Huecos conocidos que quedan fuera:** `upcomingSessions` del dashboard; alta self-service de
+clientes (Edge Function que crea el usuario); Supabase Storage para avatares/portadas reales
+(siguen siendo placeholders); Realtime/offline-first (React Query refetch cubre el cross-device).
 
 ---
 
@@ -494,7 +534,7 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - `@supabase/supabase-js` — backend real (Fase 9: Auth; Fase 10: resto de Gateways).
 - `expo-secure-store` — persistencia de sesión en nativo (ver `src/lib/secureStorage.ts` para
   el fallback en web, que no lo soporta).
-- Dev: `eas-cli`, `babel-preset-expo`, `tailwindcss`
+- Dev: `eas-cli`, `supabase` (CLI — migraciones/seed de la Fase 10), `babel-preset-expo`, `tailwindcss`
 
 **Previsto para más adelante (instalar cuando toque, con confirmación):**
 - `jest` + `@testing-library/react-native` + `jest-expo` — testing (si se pide)
@@ -648,7 +688,7 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 8. ✅ **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol, grupo `app/(client)/`): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
 9. ✅ **Fase 9** — Backend real de autenticación **multi-rol** con Supabase (`AuthGateway` +
    `supabaseAuthGateway` + persistencia de sesión + refresh), verificado para ambos roles.
-10. **Fase 10** — Conectar todos los Gateways a datos reales (esquema BD, migraciones, **permisos por rol** — cliente ve solo lo suyo).
+10. 🚧 **Fase 10** — Conectar todos los Gateways a Supabase (esquema BD + RLS por rol, migración con Supabase CLI, 7 Gateways `*.supabase.ts`, dashboard con composición real parcial). **Código completo**; pendiente aplicar la migración/seed al proyecto y verificar.
 11. **Fase 11** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
 12. **Futuro** — Monorepo + extracción de módulos; offline-first; notificaciones (recordatorio de sesión, cliente registró entreno); chat cliente–entrenador; EAS Build + tiendas.
