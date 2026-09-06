@@ -8,11 +8,18 @@ import type { Consent, ConsentRecord, LoginCredentials, LoginResult, Session } f
  */
 export interface AuthGateway {
   signIn(credentials: LoginCredentials): Promise<LoginResult>;
+  /** Cierra la sesión y **revoca el refresh token en el servidor** (scope global). */
   signOut(): Promise<void>;
   /** Sesión vigente (desde el token persistido), o `null` si no hay ninguna. */
   getSession(): Promise<Session | null>;
   /** Refresca la sesión vigente. `null` si el refresh token ya no es válido. */
   refresh(): Promise<Session | null>;
+  /**
+   * Notifica cuando la sesión termina **fuera del control de la app**: el token
+   * caducó, se revocó desde otro dispositivo, o hubo logout en otra pestaña.
+   * Devuelve la función para cancelar la suscripción.
+   */
+  onSessionEnd(callback: () => void): () => void;
   /**
    * Consentimiento de política de datos del usuario actual, o `null` si nunca
    * lo aceptó. Requiere sesión.

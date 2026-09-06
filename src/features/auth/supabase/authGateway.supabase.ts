@@ -65,7 +65,20 @@ export function createSupabaseAuthGateway(): AuthGateway {
     },
 
     async signOut(): Promise<void> {
-      await supabase.auth.signOut();
+      // scope 'global' (por defecto, explícito): revoca TODOS los refresh
+      // tokens del usuario en el servidor, no solo el de este dispositivo.
+      await supabase.auth.signOut({ scope: 'global' });
+    },
+
+    onSessionEnd(callback: () => void): () => void {
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        // SIGNED_OUT lo emite supabase-js al fallar el refresh (token caducado
+        // o revocado), al recibir un logout de otra pestaña, y al llamar
+        // signOut(). El store ya limpia en el logout explícito, así que este
+        // callback es idempotente.
+        if (event === 'SIGNED_OUT') callback();
+      });
+      return () => data.subscription.unsubscribe();
     },
 
     async getSession(): Promise<Session | null> {

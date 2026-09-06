@@ -4,6 +4,9 @@ import type { AuthGateway } from '../gateway';
 import type { AuthStatus, Consent, ConsentRecord, LoginCredentials, User } from '@/types/auth';
 import { isLoginSuccess } from '@/types/auth';
 
+/** Inactividad máxima antes de cerrar sesión automáticamente (web y nativo). */
+export const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
  * Estado de sesión, respaldado por `AuthGateway` (inyectado desde
  * `app/_layout.tsx` vía `configureAuthGateway`, ver `AuthGatewayProvider`).
@@ -33,7 +36,14 @@ interface AuthState {
    * @returns `true` si el login fue exitoso.
    */
   login: (credentials: LoginCredentials) => Promise<boolean>;
+  /** Cierre iniciado por el usuario: revoca en el servidor + limpia el estado. */
   logout: () => Promise<void>;
+  /**
+   * Cierre por causa externa (token caducado/revocado, logout en otra pestaña,
+   * timeout por inactividad): solo limpia el estado local — el servidor ya
+   * invalidó la sesión (o lo hará el propio supabase-js).
+   */
+  endSession: () => void;
   /** Vuelve a leer el consentimiento del usuario actual (ej: tras `set-password`). */
   refreshConsent: () => Promise<void>;
   /** Registra la aceptación de `policyVersion` para el usuario actual. */
@@ -123,7 +133,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await getGateway().signOut();
+    try {
+      await getGateway().signOut();
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+        status: 'idle',
+        error: null,
+        consent: null,
+        consentReady: false,
+      });
+    }
+  },
+
+  endSession: () => {
+    if (!get().user) return;
     set({
       user: null,
       isAuthenticated: false,
@@ -148,3 +173,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set((state) => (state.error ? { error: null, status: 'idle' } : state)),
 }));
+
+/**
+ * Conecta el fin de sesión externo (caducidad, revocación remota, logout en
+ * otra pestaña) con la limpieza del store. Llamar una vez, al montar la app
+ * (`SessionGuard`). Devuelve la función para cancelar la suscripción.
+ */
+export function subscribeAuthGatewayEvents(): () => void {
+  return getGateway().onSessionEnd(() => {
+    useAuthStore.getState().endSession();
+  });
+}

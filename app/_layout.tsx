@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { configureAuthGateway, useAuthStore } from '@/features/auth';
+import { configureAuthGateway, SessionGuard, useAuthStore } from '@/features/auth';
 import { createSupabaseAuthGateway } from '@/features/auth/supabase/authGateway.supabase';
 import { NotificationsBridge } from '@/features/notifications';
 import { GatewaysProvider } from '@/gateways';
@@ -57,6 +57,7 @@ export default function RootLayout(): React.JSX.Element | null {
         <QueryClientProvider client={queryClient}>
           <GatewaysProvider>
             <StatusBar style="dark" />
+            <SessionGuard />
             <NotificationsBridge />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />

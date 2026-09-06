@@ -422,12 +422,12 @@ intacta la interfaz que consume la UI. Dos roles: entrenador y cliente.
    guards de rol de `(auth)/_layout.tsx`, `(app)/_layout.tsx`, `(client)/_layout.tsx` y
    `app/index.tsx` (que solo miran `user`) nunca ven un falso "no autenticado" en pleno arranque.
 4. **Persistencia de sesión**: `src/lib/secureStorage.ts` (nuevo) — wrapper que usa
-   `expo-secure-store` en nativo (iOS Keychain / Android Keystore) y `localStorage` en web,
-   porque `expo-secure-store` **no tiene implementación web** (`ExpoSecureStore.default
-   .getValueWithKeyAsync is not a function` en vez de fallar de forma legible — se descubrió
-   probando el login real con Playwright). Mismo precedente que `src/lib/confirm.ts` (rama por
-   `Platform.OS`). Lo usan tanto `mockAuthGateway` (sesión mock persistida) como
-   `src/lib/supabase.ts` (`createClient(..., { auth: { storage: secureStorage } })`).
+   `expo-secure-store` en nativo (iOS Keychain / Android Keystore) y, en web, **`sessionStorage`**
+   (ver "Endurecimiento de sesión" más abajo; era `localStorage` hasta 2026-09-06). `expo-secure-store`
+   **no tiene implementación web** (`ExpoSecureStore.default.getValueWithKeyAsync is not a function`
+   en vez de fallar de forma legible — se descubrió probando el login real con Playwright). Mismo
+   precedente que `src/lib/confirm.ts` (rama por `Platform.OS`). Lo usa `src/lib/supabase.ts`
+   (`createClient(..., { auth: { storage: secureStorage } })`).
 5. **Refresh de sesión**: `supabase-js` lo maneja internamente (`autoRefreshToken: true`);
    `AuthGateway.refresh()` expone `supabase.auth.refreshSession()` para el caso en que la UI
    necesite forzarlo.
@@ -438,6 +438,35 @@ vuelve a login); "Cerrar Sesión" desde el Drawer → limpia sesión, reload pos
 `/login`. Mismo flujo repetido con un usuario `role:'client', client_id:'cli_luis'` → enruta a
 `/(client)/routine` con los datos reales de ese cliente (rutina asignada, mensaje del
 entrenador), persiste tras reload. `typecheck` y `export:web` en verde.
+
+### Endurecimiento de sesión (2026-09-06)
+
+Auditoría de seguridad pedida por el usuario. Estado y cambios:
+
+- **RLS**: ya activa en **las 20 tablas** `public` (verificado con un probe `anon` → 0 filas en
+  todas). Nada que activar.
+- **Cierre server-side**: `signOut()` pasa a `signOut({ scope: 'global' })` explícito — revoca
+  **todos** los refresh tokens del usuario en el servidor (verificado: tras `logout` el refresh
+  token vigente da 400). La rotación de refresh token ya estaba activa.
+- **`SessionGuard`** (`src/features/auth/components/SessionGuard.tsx`, montado en `app/_layout.tsx`):
+  - `AuthGateway.onSessionEnd()` → `supabase.auth.onAuthStateChange` escucha `SIGNED_OUT`
+    (token caducado/revocado, logout en otra pestaña) → `authStore.endSession()` (limpieza local;
+    el servidor ya invalidó). `logout()` = cierre iniciado por el usuario (revoca + limpia).
+  - **Timeout por inactividad** `IDLE_TIMEOUT_MS = 30 min`: web con eventos reales
+    (`pointerdown`/`keydown`/`wheel`/`touchstart`); nativo comprobando el tiempo en 2.º plano al
+    volver a `active` (sin listener global de toques).
+- **Token en `sessionStorage`** (web): la clave `sb-<ref>-auth-token` (access + refresh) muere al
+  cerrar la pestaña y **no se escribe a disco**. Coste: re-login por pestaña / reinicio del
+  navegador. Volver a `localStorage` = una línea en `secureStorage.ts`.
+
+**Pendiente (hosting, no en código):** CSP + `X-Frame-Options: DENY` + `X-Content-Type-Options:
+nosniff` como cabeceras reales en EAS Hosting. `web.output` es `single` → `app/+html.tsx` no
+aplica; el `index.html` generado no tiene `<script>` inline, así que un `script-src 'self'` es
+viable (probar antes con `Content-Security-Policy-Report-Only`). CSP sugerida:
+`default-src 'self'; object-src 'none'; base-uri 'self'; img-src 'self' data: blob: https:;
+font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';
+connect-src 'self' https://<ref>.supabase.co wss://<ref>.supabase.co https://exp.host`.
+También en el dashboard de Supabase → Auth: bajar el "JWT expiry" y activar el "inactivity timeout".
 
 **No se hizo (fuera de alcance, sin pedirse):** registro self-service, recuperación de
 contraseña, biometría, OAuth social (los botones Google/Apple del login siguen siendo
@@ -799,8 +828,8 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   ver Fase 6) — gráfica de evolución de peso del perfil de cliente y de progresión de carga
   (1RM estimado) del seguimiento de entrenamientos (Fase 7).
 - `@supabase/supabase-js` — backend real (Fase 9: Auth; Fase 10: resto de Gateways).
-- `expo-secure-store` — persistencia de sesión en nativo (ver `src/lib/secureStorage.ts` para
-  el fallback en web, que no lo soporta).
+- `expo-secure-store` — persistencia de sesión en nativo (ver `src/lib/secureStorage.ts`; en web
+  el fallback es `sessionStorage`, ver "Endurecimiento de sesión" en la Fase 9).
 - `expo-notifications` + `expo-device` — notificaciones push (Fase 15). El push remoto **no
   funciona en web ni Expo Go**; `src/features/notifications/push.ts` degrada a no-op ahí.
 - Dev: `eas-cli`, `supabase` (CLI — migraciones/seed de la Fase 10), `babel-preset-expo`, `tailwindcss`
@@ -816,7 +845,7 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 
 ```
 app/                          # Expo Router (rutas = pantallas)
-  _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider + NotificationsBridge
+  _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider + SessionGuard + NotificationsBridge
   index.tsx                   # redirect según sesión y rol → (app) coach | (client) | (auth)
   (auth)/
     _layout.tsx               # si hay sesión → área según rol
@@ -858,7 +887,7 @@ src/
   assets/routines/            # portadas de rutina (banners del usuario optimizados) → routineImages.ts
   lib/                        # helpers sin UI (delay, storage, id, queryState, confirm, openDrawer, date, schedule)
   features/
-    auth/                     # login + sesión (Zustand)
+    auth/                     # login + sesión (Zustand) + SessionGuard (timeout inactividad + onAuthStateChange) + consentimiento
     dashboard/                # tab Inicio
     clients/                  # clientes + perfil (mediciones, suscripción/pagos, asignación de rutinas)
     messages/                 # hilo entrenador↔cliente (MessageThread compartido, CoachMessageCard)
