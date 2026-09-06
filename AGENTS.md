@@ -843,6 +843,8 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
   el fallback es `sessionStorage`, ver "Endurecimiento de sesión" en la Fase 9).
 - `expo-notifications` + `expo-device` — notificaciones push (Fase 15). El push remoto **no
   funciona en web ni Expo Go**; `src/features/notifications/push.ts` degrada a no-op ahí.
+- `expo-dev-client` — runtime del *development build* (sustituye a Expo Go para probar el push
+  y cualquier código nativo). Ver "Build nativo (EAS Build)" abajo.
 - Dev: `eas-cli`, `supabase` (CLI — migraciones/seed de la Fase 10), `babel-preset-expo`, `tailwindcss`
 
 **Previsto para más adelante (instalar cuando toque, con confirmación):**
@@ -967,10 +969,38 @@ npm run typecheck         # tsc --noEmit — DEBE pasar antes de dar una tarea p
 npm run export:web        # build web estático a dist/
 npm run deploy            # export + deploy preview a EAS Hosting
 npm run deploy -- --prod  # deploy a producción
+npm run build:dev         # eas build --profile development --platform android (APK con dev client)
+npm run build:preview     # eas build --profile preview --platform android (APK interno)
+npm run build:prod        # eas build --profile production --platform android (AAB para Play Store)
 ```
 
 Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si tocó bundling
 (config de babel/metro/tailwind, deps), `npm run export:web` sin errores.
+
+### Build nativo (EAS Build) — Android — CONFIG LISTA, build pendiente
+
+`expo-notifications` (push, Fase 15) **no funciona en web ni Expo Go**: hace falta un
+*development build*. Config hecha (2026-09-06): `expo-dev-client`, `eas.json` (perfiles
+`development` / `preview` / `production`), `android.package` / `ios.bundleIdentifier` =
+`com.navyteam.app` en `app.json`. El repo sigue "managed" (CNG) — no hay carpeta `android/`.
+
+**Para el primer APK de dev** (sin push todavía):
+```
+npx eas login                              # como drmartinn25
+npm run build:dev                          # ~10-15 min en la nube, sale un enlace al APK
+```
+Se instala en un Android real (o emulador con Play Services), y ya sustituye a Expo Go.
+
+**Para que llegue el push** (FCM — Expo lo usa de relay):
+1. Firebase console → nuevo proyecto → añadir app Android con package `com.navyteam.app`.
+2. Descargar `google-services.json` → raíz del repo. Añadir a `app.json`:
+   `"android": { ..., "googleServicesFile": "./google-services.json" }`. Commitearlo (no es secreto).
+3. Firebase → Configuración → Cuentas de servicio → generar clave privada (JSON, FCM V1).
+   `npx eas credentials` → Android → *Push Notifications: FCM V1* → subir ese JSON.
+4. `npm run build:dev` otra vez. Al iniciar sesión, la app pide permiso, registra el token en
+   `push_tokens` y ya entran los banners.
+
+iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
 
 ---
 
@@ -1034,13 +1064,26 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
     `dashboard_dismissals` + `SwipeToDismiss`. Código completo; pendiente aplicar `0005`.
 14. 🚧 **Fase 15** — **Notificaciones** (bandeja in-app + push): tablas `notifications` /
     `push_tokens`, triggers de dominio → `_notify()`, Edge Function `send-push` (Expo Push API),
-    `NotificationsBridge` + campana + bandeja. Migración `0006`. Código completo; pendiente aplicar
-    `0006`, desplegar `send-push`, y verificar el banner OS con un build nativo. Incluye el
-    rework de "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
+    `NotificationsBridge` + campana + bandeja. Migración `0006` **aplicada y verificada**;
+    `send-push` desplegada; `eas.json` + `expo-dev-client` listos. Pendiente: `PUSH_HOOK_SECRET` +
+    `app_config` + FCM + `eas build` + probar el banner OS en un Android. Incluye el rework de
+    "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
 15. **Fase 14** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
-16. **Futuro** — Integración WhatsApp; `eas.json` + dev build + banner OS del push; recordatorios
-    programados (`pg_cron`); monorepo + extracción de módulos; offline-first; EAS Build + tiendas.
+16. **Asistente de IA para rutinas y planes** (idea de producto — *plus* de pago) — el entrenador
+    describe los requerimientos de cada cliente (objetivo, nivel, edad/medidas) + sus
+    **limitaciones alimentarias** (alergias, intolerancias, vegetariano/vegano, religión,
+    presupuesto) + **limitaciones físicas** (lesiones, movilidad, condiciones médicas, equipo
+    disponible) y un asistente propone un **borrador** de rutina (bloques del catálogo de
+    ejercicios) y/o de plan de alimentación (comidas con alimentos del catálogo) que el entrenador
+    **revisa y ajusta antes de asignar**. Notas técnicas: campos nuevos en `clients` para las
+    limitaciones (tags + texto); Edge Function que llama a un LLM (Claude API) con el catálogo de
+    `exercises`/`foods` del coach + el perfil como contexto → devuelve `RoutineInput` /
+    `NutritionPlanInput` estructurado; el entrenador siempre valida (calidad + responsabilidad);
+    disclaimer médico/legal (no sustituye criterio profesional, sobre todo con condiciones
+    médicas); coste por generación → límite por plan o feature de pago.
+17. **Futuro** — Integración WhatsApp; banner OS del push (FCM + `eas build`); recordatorios
+    programados (`pg_cron`); monorepo + extracción de módulos; offline-first; builds para tiendas.
 
 ✅ **Rediseño del editor de rutinas** (post-Fase 13) — cabecera con cifras en vivo, bloques de
 ejercicio colapsables, picker con buscador. Ver sección "Rediseño del editor de rutinas".

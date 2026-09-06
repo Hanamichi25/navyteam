@@ -13,6 +13,7 @@
     "@types/react": "~19.2.4",
     "expo": "~57.0.17",
     "expo-constants": "~57.0.16",
+    "expo-dev-client": "~57.0.18",
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.3",
     "expo-linear-gradient": "~57.0.1",
@@ -46,7 +47,10 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export:web": "expo export --platform web",
-    "deploy": "expo export --platform web && eas deploy"
+    "deploy": "expo export --platform web && eas deploy",
+    "build:dev": "eas build --profile development --platform android",
+    "build:preview": "eas build --profile preview --platform android",
+    "build:prod": "eas build --profile production --platform android"
   },
   "private": true,
   "devDependencies": {
