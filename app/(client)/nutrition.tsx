@@ -6,27 +6,23 @@ import { DateStrip } from '@/components/DateStrip';
 import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
 import { useClient } from '@/features/clients';
-import { NutritionPlanDetail, useNutritionPlans } from '@/features/nutrition';
+import { NutritionPlanDetail, useNutritionPlan } from '@/features/nutrition';
 
 export default function ClientNutritionScreen(): React.JSX.Element {
   const user = useAuthStore((state) => state.user);
   const clientId = user?.clientId ?? '';
   const client = useClient(clientId, clientId !== '');
-  const plans = useNutritionPlans();
+  const assignedPlan = client.status === 'ready' ? client.data.assignedPlan : null;
+  const plan = useNutritionPlan(assignedPlan?.id ?? '', Boolean(assignedPlan));
 
   if (!user) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  const assignedPlan =
-    client.status === 'ready' ? client.data.assignedPlan : null;
-  const fullPlan =
-    assignedPlan && plans.status === 'ready'
-      ? plans.data.find((plan) => plan.id === assignedPlan.id)
-      : null;
+  const fullPlan = plan.status === 'ready' ? plan.data : null;
 
-  const loading = client.status === 'loading' || plans.status === 'loading';
-  const errored = client.status === 'error' || plans.status === 'error';
+  const loading = client.status === 'loading' || (Boolean(assignedPlan) && plan.status === 'loading');
+  const errored = client.status === 'error' || plan.status === 'error';
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>

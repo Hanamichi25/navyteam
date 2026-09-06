@@ -12,6 +12,14 @@ export interface PaymentInput {
 }
 
 /**
+ * Estado del alta por invitación de un cliente:
+ * - `none`: la ficha no tiene cuenta de acceso.
+ * - `invited`: se envió la invitación pero el cliente aún no puso contraseña.
+ * - `active`: el cliente ya tiene acceso a la app.
+ */
+export type ClientAccess = 'none' | 'invited' | 'active';
+
+/**
  * Interfaz de infraestructura que necesita el módulo "clientes".
  * TODO(backend): la implementación real (Fase 9) habla contra la API/BD.
  */
@@ -45,4 +53,11 @@ export interface ClientsGateway {
    * actual, lo que sea mayor).
    */
   registerPayment(clientId: string, input: PaymentInput): Promise<ClientDetail>;
+  /**
+   * Envía (o reenvía) al cliente la invitación por email para crear su cuenta.
+   * La ficha debe tener email. Requiere backend real (Edge Function).
+   */
+  invite(clientId: string): Promise<void>;
+  /** Estado del alta por invitación del cliente. */
+  accessStatus(clientId: string): Promise<ClientAccess>;
 }

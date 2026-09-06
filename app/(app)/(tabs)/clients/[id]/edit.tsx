@@ -24,7 +24,9 @@ export default function EditClientScreen(): React.JSX.Element {
     confirm(
       {
         title: 'Eliminar usuario',
-        message: '¿Seguro que quieres eliminarlo? Se perderá su historial de mediciones.',
+        message:
+          'Se eliminarán su cuenta de acceso y todos sus datos: mediciones, rutinas asignadas, ' +
+          'entrenos, mensajes y pagos. Esta acción no se puede deshacer.',
         confirmLabel: 'Eliminar',
         destructive: true,
       },

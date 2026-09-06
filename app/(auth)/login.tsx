@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +19,7 @@ function noop(): void {
 }
 
 export default function LoginScreen(): React.JSX.Element {
+  const router = useRouter();
   return (
     <SafeAreaView className="flex-1 bg-surface">
       <KeyboardAvoidingView
@@ -76,6 +78,14 @@ export default function LoginScreen(): React.JSX.Element {
               <Text className="text-sm font-bold text-primary">Crear cuenta</Text>
             </Pressable>
           </View>
+
+          <Text className="mt-6 text-center text-xs leading-5 text-ink-faint">
+            Al iniciar sesión aceptas nuestra{' '}
+            <Text className="font-semibold text-primary" onPress={() => router.push('/privacy')}>
+              Política de Tratamiento de Datos
+            </Text>
+            .
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { useAuthStore } from '@/features/auth';
+import { useUnreadNotificationCount } from '@/features/notifications';
 import { confirm } from '@/lib/confirm';
 import { COLORS } from '@/lib/colors';
 import { Avatar } from './Avatar';
@@ -29,7 +30,9 @@ const PRIMARY_LINKS: readonly DrawerLink[] = [
   { label: 'Rutinas', icon: 'barbell-outline', href: '/(app)/(tabs)/routines', match: ['/routines'] },
   { label: 'Ejercicios', icon: 'fitness-outline', href: '/(app)/exercises', match: ['/exercises'] },
   { label: 'Alimentación', icon: 'nutrition-outline', href: '/(app)/(tabs)/nutrition', match: ['/nutrition'] },
-  { label: 'Mensajes', icon: 'chatbubble-outline', href: '/(app)/messages', match: ['/messages'], badge: 2 },
+  { label: 'Alimentos', icon: 'fast-food-outline', href: '/(app)/foods', match: ['/foods'] },
+  { label: 'Mensajes', icon: 'chatbubble-outline', href: '/(app)/messages', match: ['/messages'] },
+  { label: 'Notificaciones', icon: 'notifications-outline', href: '/(app)/notifications', match: ['/notifications'] },
   { label: 'Estadísticas', icon: 'stats-chart-outline', href: '/(app)/stats', match: ['/stats'] },
   { label: 'Configuración', icon: 'settings-outline', href: '/(app)/settings', match: ['/settings'] },
 ];
@@ -77,6 +80,7 @@ export function AppDrawerContent(
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const unreadNotifications = useUnreadNotificationCount();
 
   const go = (href: string): void => {
     props.navigation.closeDrawer();
@@ -126,7 +130,11 @@ export function AppDrawerContent(
         {PRIMARY_LINKS.map((link) => (
           <DrawerItem
             key={link.href}
-            link={link}
+            link={
+              link.href === '/(app)/notifications' && unreadNotifications > 0
+                ? { ...link, badge: unreadNotifications }
+                : link
+            }
             active={isActive(pathname, link.match)}
             onPress={() => go(link.href)}
           />

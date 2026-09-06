@@ -178,9 +178,21 @@ function buildAchievements(
   return out.slice(0, 6);
 }
 
+async function currentUid(): Promise<string> {
+  const { data } = await supabase.auth.getUser();
+  const uid = data.user?.id;
+  if (!uid) throw new Error('No hay sesión.');
+  return uid;
+}
+
 export function createSupabaseDashboardGateway(): DashboardGateway {
   return {
     async get(): Promise<DashboardData> {
+      const dismissedRows = unwrapList(
+        await supabase.from('dashboard_dismissals').select('item_key'),
+      ) as { item_key: string }[];
+      const dismissed = new Set(dismissedRows.map((r) => r.item_key));
+
       const clients = unwrapList(
         await supabase.from('clients').select('id, name, avatar_url').order('name'),
       ) as ClientLite[];
@@ -209,11 +221,13 @@ export function createSupabaseDashboardGateway(): DashboardGateway {
       ) as { id: string; client_id: string; sender: string; sent_at: string }[];
 
       const now = Date.now();
+      const RECENT_WINDOW_MS = 30 * DAY_MS;
       const measurementTimes = measurements
         .map((m) => parseDdMmAaaa(isoToDdmmaaaa(m.date))?.getTime())
         .filter((t): t is number => t !== undefined);
 
-      // --- recentActivity: sesiones + mediciones + mensajes, más reciente primero
+      // --- recentActivity: sesiones + mediciones + mensajes de los últimos 30
+      // días, más reciente primero.
       const activity: { at: number; item: ActivityItem }[] = [];
       for (const s of sessions) {
         const at = parseDdMmAaaa(s.date)?.getTime() ?? 0;
@@ -225,6 +239,7 @@ export function createSupabaseDashboardGateway(): DashboardGateway {
             kind: 'workout',
             actorName: client?.name ?? 'Cliente',
             clientId: s.clientId,
+            entityId: s.id,
             action: `completó ${s.routineName}`,
             timeAgo: relativeDayLabel(at ? new Date(at) : null, 'Sin fecha'),
           },
@@ -240,6 +255,7 @@ export function createSupabaseDashboardGateway(): DashboardGateway {
             kind: 'weight',
             actorName: client?.name ?? 'Cliente',
             clientId: m.client_id,
+            entityId: m.id,
             action: `registró peso: ${m.weight_kg} kg`,
             timeAgo: relativeDayLabel(at ? new Date(at) : null, 'Sin fecha'),
           },
@@ -255,12 +271,15 @@ export function createSupabaseDashboardGateway(): DashboardGateway {
             kind: 'message',
             actorName: client?.name ?? 'Cliente',
             clientId: msg.client_id,
+            entityId: msg.id,
             action: 'envió un mensaje',
             timeAgo: relativeDayLabel(at ? new Date(at) : null, 'Sin fecha'),
           },
         });
       }
-      activity.sort((a, b) => b.at - a.at);
+      const recentActivity = activity
+        .filter((a) => a.at >= now - RECENT_WINDOW_MS)
+        .sort((a, b) => b.at - a.at);
 
       return {
         activeUsers: clients.length,
@@ -268,10 +287,32 @@ export function createSupabaseDashboardGateway(): DashboardGateway {
           week: statsForWindow(sessions, measurementTimes, now, 7),
           month: statsForWindow(sessions, measurementTimes, now, 30),
         },
-        weeklyAchievements: buildAchievements(sessions, clientsById, now),
-        recentActivity: activity.slice(0, 12).map((a) => a.item),
+        weeklyAchievements: buildAchievements(sessions, clientsById, now).filter(
+          (a) => !dismissed.has(a.id),
+        ),
+        recentActivity: recentActivity
+          .map((a) => a.item)
+          .filter((item) => !dismissed.has(item.id))
+          .slice(0, 12),
         upcomingSessions: [],
+        dismissedCount: dismissed.size,
       };
+    },
+
+    async dismiss(itemKey: string): Promise<void> {
+      const { error } = await supabase
+        .from('dashboard_dismissals')
+        .upsert({ item_key: itemKey }, { onConflict: 'coach_id,item_key', ignoreDuplicates: true });
+      if (error) throw new Error(error.message);
+    },
+
+    async restoreDismissed(): Promise<void> {
+      const uid = await currentUid();
+      const { error } = await supabase
+        .from('dashboard_dismissals')
+        .delete()
+        .eq('coach_id', uid);
+      if (error) throw new Error(error.message);
     },
   };
 }

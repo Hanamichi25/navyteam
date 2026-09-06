@@ -46,18 +46,21 @@ export function NutritionPlanCard({ plan, onPress }: NutritionPlanCardProps): Re
       <View className="gap-2 p-4">
         <Text className="text-base font-bold text-ink">{plan.name}</Text>
         <Text className="text-sm font-semibold text-primary">
-          {plan.kcalPerDay} kcal/día
+          {plan.kcalPerDay > 0 ? `${plan.kcalPerDay} kcal/día` : 'Sin calorías definidas'}
+          {plan.mealCount > 0 ? ` · ${plan.mealCount} comida${plan.mealCount === 1 ? '' : 's'}` : ''}
         </Text>
 
-        <View className="mt-1 gap-1.5">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xs text-ink-muted">Macros (P / C / G)</Text>
-            <Text className="text-xs font-semibold text-ink-muted">
-              {formatMacros(plan.macros)}
-            </Text>
+        {plan.mealCount > 0 ? (
+          <View className="mt-1 gap-1.5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xs text-ink-muted">Macros (P / C / G)</Text>
+              <Text className="text-xs font-semibold text-ink-muted">
+                {formatMacros(plan.macros)}
+              </Text>
+            </View>
+            <MacroBar macros={plan.macros} />
           </View>
-          <MacroBar macros={plan.macros} />
-        </View>
+        ) : null}
 
         <View className="mt-1 flex-row items-center gap-1.5">
           <Ionicons name="people-outline" size={15} color={COLORS.inkFaint} />

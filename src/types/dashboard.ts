@@ -36,6 +36,11 @@ export interface ActivityItem {
   actorName: string;
   /** Id del cliente relacionado, si lo hay. */
   clientId?: string;
+  /**
+   * Id de la entidad de origen: la sesión (`workout`), la medición (`weight`) o
+   * el mensaje (`message`). Permite abrir el detalle desde el feed.
+   */
+  entityId?: string;
   /** Descripción de la acción, sin incluir el nombre (ej: "completó su rutina de piernas"). */
   action: string;
   /** Texto relativo ya formateado (ej: "Hace 10 min"). El backend real devolverá un timestamp. */
@@ -85,8 +90,11 @@ export interface DashboardData {
   activeUsers: number;
   /** Métricas del "Resumen", una lista por periodo. */
   stats: Record<DashboardPeriod, DashboardStat[]>;
-  /** Logros de clientes en los últimos 7 días (PRs, rachas). */
+  /** Logros de clientes en los últimos 7 días (PRs, rachas), sin los ocultados. */
   weeklyAchievements: Achievement[];
+  /** Feed de actividad, sin las entradas ocultadas por el entrenador. */
   recentActivity: ActivityItem[];
   upcomingSessions: UpcomingSession[];
+  /** Nº de entradas (logros + actividad) que el entrenador ha ocultado. */
+  dismissedCount: number;
 }

@@ -1,11 +1,12 @@
 import { Redirect, useRouter } from 'expo-router';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { ListRow } from '@/components/ListRow';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuthStore } from '@/features/auth';
+import { confirm } from '@/lib/confirm';
 
 /**
  * Perfil del entrenador. Provisional: no hay mockup dedicado todavía.
@@ -21,17 +22,18 @@ export default function ProfileScreen(): React.JSX.Element {
   }
 
   const confirmLogout = (): void => {
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres salir de tu cuenta?', [
-      { text: 'Cancelar', style: 'cancel' },
+    confirm(
       {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
+        title: 'Cerrar sesión',
+        message: '¿Seguro que quieres salir de tu cuenta?',
+        confirmLabel: 'Cerrar sesión',
+        destructive: true,
       },
-    ]);
+      async () => {
+        await logout();
+        router.replace('/(auth)/login');
+      },
+    );
   };
 
   return (
@@ -62,6 +64,11 @@ export default function ProfileScreen(): React.JSX.Element {
             label="Ayuda y Soporte"
             iconName="help-circle-outline"
             onPress={() => router.push('/(app)/support')}
+          />
+          <ListRow
+            label="Política de Tratamiento de Datos"
+            iconName="document-text-outline"
+            onPress={() => router.push('/privacy')}
           />
           <ListRow
             label="Cerrar Sesión"

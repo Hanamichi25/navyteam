@@ -1,26 +1,38 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { NumberField } from '@/components/NumberField';
 import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
-import type { NutritionPlanInput } from '@/types/nutrition';
+import { useFoods } from '@/features/foods';
+import type { Food } from '@/types/food';
+import type { NutritionPlanDetail, NutritionPlanInput } from '@/types/nutrition';
 import { NUTRITION_CATEGORY_OPTIONS } from '../labels';
+import {
+  draftsFromMeals,
+  draftsToInput,
+  newItem,
+  newMeal,
+  type MealDraft,
+} from '../mealDraft';
+import { itemTotals, mealInputTotals } from '../nutritionMath';
 import { nutritionPlanSchema, type NutritionPlanFormValues } from '../validation';
+import { FoodPickerModal } from './FoodPickerModal';
+import { MealEditorCard } from './MealEditorCard';
+import { PlanTotalsCard } from './PlanTotalsCard';
 
 interface NutritionPlanFormProps {
-  initialValues?: NutritionPlanInput;
+  initialValues?: NutritionPlanDetail;
   submitLabel: string;
   isSubmitting: boolean;
   onSubmit: (input: NutritionPlanInput) => void | Promise<void>;
-  /** Contenido extra bajo el botón principal, ej: eliminar en modo edición. */
   footer?: ReactNode;
 }
 
-/** Formulario compartido de plan de alimentación, usado en modo crear y editar. */
+/** Formulario compartido del plan de alimentación: metadata + constructor de comidas. */
 export function NutritionPlanForm({
   initialValues,
   submitLabel,
@@ -28,31 +40,59 @@ export function NutritionPlanForm({
   onSubmit,
   footer,
 }: NutritionPlanFormProps): React.JSX.Element {
-  const { control, handleSubmit } = useForm<NutritionPlanFormValues>({
+  const foods = useFoods();
+  const [meals, setMeals] = useState<MealDraft[]>(
+    initialValues ? draftsFromMeals(initialValues.meals) : [],
+  );
+  const [pickerForMeal, setPickerForMeal] = useState<string | null>(null);
+
+  const foodsById = useMemo(() => {
+    const map = new Map<string, Food>();
+    if (foods.status === 'ready') for (const f of foods.data) map.set(f.id, f);
+    return map;
+  }, [foods]);
+
+  const { control, handleSubmit, watch } = useForm<NutritionPlanFormValues>({
     resolver: zodResolver(nutritionPlanSchema),
     defaultValues: {
       name: initialValues?.name ?? '',
       category: initialValues?.category ?? null,
-      kcalPerDay: initialValues?.kcalPerDay ?? null,
-      proteinPct: initialValues?.macros.proteinPct ?? null,
-      carbsPct: initialValues?.macros.carbsPct ?? null,
-      fatPct: initialValues?.macros.fatPct ?? null,
+      targetKcalPerDay: initialValues?.targetKcalPerDay ?? null,
       notes: initialValues?.notes ?? '',
     },
     mode: 'onTouched',
   });
+  const target = watch('targetKcalPerDay');
+
+  const totals = useMemo(
+    () =>
+      mealInputTotals(
+        meals.flatMap((m) =>
+          m.items
+            .filter((i) => i.quantity !== null)
+            .map((i) => ({ foodId: i.foodId, quantity: i.quantity as number })),
+        ),
+        foodsById,
+      ),
+    [meals, foodsById],
+  );
+
+  const mealKcal = (meal: MealDraft): number =>
+    meal.items.reduce((n, i) => {
+      const food = foodsById.get(i.foodId);
+      return n + (food && i.quantity !== null ? itemTotals(i.quantity, food).kcal : 0);
+    }, 0);
+
+  const patchMeal = (id: string, fn: (m: MealDraft) => MealDraft): void =>
+    setMeals((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
 
   const submit = handleSubmit((values) => {
     onSubmit({
       name: values.name,
       category: values.category!,
-      kcalPerDay: values.kcalPerDay!,
-      macros: {
-        proteinPct: values.proteinPct!,
-        carbsPct: values.carbsPct!,
-        fatPct: values.fatPct!,
-      },
+      targetKcalPerDay: values.targetKcalPerDay,
       notes: values.notes.trim() || undefined,
+      meals: draftsToInput(meals),
     });
   });
 
@@ -94,11 +134,11 @@ export function NutritionPlanForm({
 
         <Controller
           control={control}
-          name="kcalPerDay"
+          name="targetKcalPerDay"
           render={({ field: { value, onChange, onBlur }, fieldState }) => (
             <NumberField
-              label="Kcal / día"
-              placeholder="2000"
+              label="Objetivo kcal/día (opcional)"
+              placeholder="1800"
               suffix="kcal"
               value={value}
               onChange={onChange}
@@ -108,78 +148,66 @@ export function NutritionPlanForm({
           )}
         />
 
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Controller
-              control={control}
-              name="proteinPct"
-              render={({ field: { value, onChange, onBlur }, fieldState }) => (
-                <NumberField
-                  label="Proteína"
-                  suffix="%"
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </View>
-          <View className="flex-1">
-            <Controller
-              control={control}
-              name="carbsPct"
-              render={({ field: { value, onChange, onBlur }, fieldState }) => (
-                <NumberField
-                  label="Carbos"
-                  suffix="%"
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </View>
-          <View className="flex-1">
-            <Controller
-              control={control}
-              name="fatPct"
-              render={({ field: { value, onChange, onBlur }, fieldState }) => (
-                <NumberField
-                  label="Grasas"
-                  suffix="%"
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </View>
-        </View>
+        <PlanTotalsCard totals={totals} target={target} />
 
-        <Controller
-          control={control}
-          name="notes"
-          render={({ field: { value, onChange, onBlur }, fieldState }) => (
-            <TextField
-              label="Notas (opcional)"
-              placeholder="Indicaciones, sustituciones, horarios de comida..."
-              multiline
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={fieldState.error?.message}
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-ink">Comidas</Text>
+
+          {meals.map((meal) => (
+            <MealEditorCard
+              key={meal.id}
+              meal={meal}
+              foodsById={foodsById}
+              mealKcal={mealKcal(meal)}
+              onChangeName={(name) => patchMeal(meal.id, (m) => ({ ...m, name }))}
+              onAddFood={() => setPickerForMeal(meal.id)}
+              onChangeItemQuantity={(itemId, quantity) =>
+                patchMeal(meal.id, (m) => ({
+                  ...m,
+                  items: m.items.map((i) => (i.id === itemId ? { ...i, quantity } : i)),
+                }))
+              }
+              onRemoveItem={(itemId) =>
+                patchMeal(meal.id, (m) => ({
+                  ...m,
+                  items: m.items.filter((i) => i.id !== itemId),
+                }))
+              }
+              onRemoveMeal={() => setMeals((prev) => prev.filter((m) => m.id !== meal.id))}
             />
-          )}
-        />
+          ))}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setMeals((prev) => [...prev, newMeal()])}
+            className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
+          >
+            <Text className="text-sm font-semibold text-primary">＋ Añadir comida</Text>
+          </Pressable>
+
+          {foods.status === 'ready' && foods.data.length === 0 ? (
+            <Text className="text-xs text-ink-faint">
+              El catálogo de alimentos está vacío. Créalos en el menú "Alimentos".
+            </Text>
+          ) : null}
+        </View>
       </ScrollView>
 
       <View className="gap-3 border-t border-line px-5 py-3">
         <Button label={submitLabel} fullWidth loading={isSubmitting} onPress={submit} />
         {footer}
       </View>
+
+      <FoodPickerModal
+        visible={pickerForMeal !== null}
+        onClose={() => setPickerForMeal(null)}
+        onPick={(foodId) => {
+          if (pickerForMeal) {
+            patchMeal(pickerForMeal, (m) => ({ ...m, items: [...m.items, newItem(foodId)] }));
+          }
+          setPickerForMeal(null);
+        }}
+      />
     </View>
   );
 }

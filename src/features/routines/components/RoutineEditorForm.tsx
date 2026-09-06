@@ -1,27 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { ChipGroup } from '@/components/ChipGroup';
-import { FeedbackState } from '@/components/FeedbackState';
 import { NumberField } from '@/components/NumberField';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
-import {
-  ExerciseListItem,
-  MUSCLE_GROUP_FILTERS,
-  useExercises,
-  type MuscleGroupFilter,
-} from '@/features/exercises';
+import { useExercises } from '@/features/exercises';
 import { createId } from '@/lib/id';
+import type { Exercise } from '@/types/exercise';
 import type { RoutineBlock, RoutineInput } from '@/types/routine';
 import { ROUTINE_CATEGORY_OPTIONS, ROUTINE_LEVEL_OPTIONS } from '../labels';
 import { routineMetaSchema, type RoutineMetaFormValues } from '../validation';
-import { ExerciseBlockRow } from './ExerciseBlockRow';
+import { ExerciseBlockCard } from './ExerciseBlockCard';
+import { ExercisePickerModal } from './ExercisePickerModal';
+import { RoutineSummaryCard } from './RoutineSummaryCard';
 
 interface RoutineEditorFormProps {
   initialValues?: RoutineInput;
@@ -34,7 +28,7 @@ interface RoutineEditorFormProps {
 
 const DEFAULT_BLOCK_SETTINGS = { sets: 3, repsMin: 8, repsMax: 12, restSec: 60, suggestedLoad: '' };
 
-/** Formulario compartido del editor de rutina: metadata + bloques de ejercicio. */
+/** Formulario compartido del editor de rutina: cabecera en vivo + metadata + bloques. */
 export function RoutineEditorForm({
   initialValues,
   submitLabel,
@@ -46,23 +40,27 @@ export function RoutineEditorForm({
   const [blocks, setBlocks] = useState<RoutineBlock[]>(initialValues?.blocks ?? []);
   const [blocksError, setBlocksError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerMuscleGroup, setPickerMuscleGroup] = useState<MuscleGroupFilter>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(
+    initialValues?.blocks?.[0]?.id ?? null,
+  );
 
-  const exerciseNameById = useMemo(() => {
-    const map = new Map<string, string>();
+  const exerciseById = useMemo(() => {
+    const map = new Map<string, Exercise>();
     if (exercises.status === 'ready') {
-      for (const exercise of exercises.data) map.set(exercise.id, exercise.name);
+      for (const exercise of exercises.data) map.set(exercise.id, exercise);
     }
     return map;
   }, [exercises]);
 
-  const pickerExercises = useMemo(() => {
-    if (exercises.status !== 'ready') return [];
-    if (pickerMuscleGroup === 'all') return exercises.data;
-    return exercises.data.filter((exercise) => exercise.muscleGroup === pickerMuscleGroup);
-  }, [exercises, pickerMuscleGroup]);
+  const countByExerciseId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const block of blocks) {
+      map.set(block.exerciseId, (map.get(block.exerciseId) ?? 0) + 1);
+    }
+    return map;
+  }, [blocks]);
 
-  const { control, handleSubmit } = useForm<RoutineMetaFormValues>({
+  const { control, handleSubmit, watch } = useForm<RoutineMetaFormValues>({
     resolver: zodResolver(routineMetaSchema),
     defaultValues: {
       name: initialValues?.name ?? '',
@@ -73,8 +71,13 @@ export function RoutineEditorForm({
     mode: 'onTouched',
   });
 
+  const values = watch();
+  const totalSets = blocks.reduce((sum, block) => sum + (block.sets || 0), 0);
+
   const addBlock = (exerciseId: string): void => {
-    setBlocks((prev) => [...prev, { id: createId('blk'), exerciseId, ...DEFAULT_BLOCK_SETTINGS }]);
+    const id = createId('blk');
+    setBlocks((prev) => [...prev, { id, exerciseId, ...DEFAULT_BLOCK_SETTINGS }]);
+    setExpandedId(id);
     setBlocksError(null);
     setPickerOpen(false);
   };
@@ -97,16 +100,16 @@ export function RoutineEditorForm({
     });
   };
 
-  const submit = handleSubmit((values) => {
+  const submit = handleSubmit((formValues) => {
     if (blocks.length === 0) {
       setBlocksError('Añade al menos un ejercicio');
       return;
     }
     onSubmit({
-      name: values.name,
-      category: values.category!,
-      level: values.level!,
-      durationMin: values.durationMin!,
+      name: formValues.name,
+      category: formValues.category!,
+      level: formValues.level!,
+      durationMin: formValues.durationMin!,
       blocks,
     });
   });
@@ -118,139 +121,133 @@ export function RoutineEditorForm({
         contentContainerClassName="gap-5 px-5 pt-2 pb-6"
         showsVerticalScrollIndicator={false}
       >
-        <Controller
-          control={control}
-          name="name"
-          render={({ field: { value, onChange, onBlur }, fieldState }) => (
-            <TextField
-              label="Nombre"
-              placeholder="Piernas y Glúteos"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={fieldState.error?.message}
-            />
-          )}
+        <RoutineSummaryCard
+          name={values.name ?? ''}
+          category={values.category ?? null}
+          level={values.level ?? null}
+          durationMin={values.durationMin ?? null}
+          exerciseCount={blocks.length}
+          totalSets={totalSets}
         />
 
-        <Controller
-          control={control}
-          name="category"
-          render={({ field: { value, onChange }, fieldState }) => (
-            <SelectField
-              label="Categoría"
-              options={ROUTINE_CATEGORY_OPTIONS}
-              value={value}
-              onChange={onChange}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
+        <View className="gap-4 rounded-2xl border border-line bg-surface p-4">
+          <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
+            Datos de la rutina
+          </Text>
 
-        <Controller
-          control={control}
-          name="level"
-          render={({ field: { value, onChange }, fieldState }) => (
-            <SelectField
-              label="Nivel"
-              options={ROUTINE_LEVEL_OPTIONS}
-              value={value}
-              onChange={onChange}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { value, onChange, onBlur }, fieldState }) => (
+              <TextField
+                label="Nombre"
+                placeholder="Piernas y Glúteos"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
 
-        <Controller
-          control={control}
-          name="durationMin"
-          render={({ field: { value, onChange, onBlur }, fieldState }) => (
-            <NumberField
-              label="Duración"
-              placeholder="45"
-              suffix="min"
-              value={value}
-              onChange={onChange}
-              onBlur={onBlur}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
+          <Controller
+            control={control}
+            name="category"
+            render={({ field: { value, onChange }, fieldState }) => (
+              <SelectField
+                label="Categoría"
+                options={ROUTINE_CATEGORY_OPTIONS}
+                value={value}
+                onChange={onChange}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="level"
+            render={({ field: { value, onChange }, fieldState }) => (
+              <SelectField
+                label="Nivel"
+                options={ROUTINE_LEVEL_OPTIONS}
+                value={value}
+                onChange={onChange}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="durationMin"
+            render={({ field: { value, onChange, onBlur }, fieldState }) => (
+              <NumberField
+                label="Duración"
+                placeholder="45"
+                suffix="min"
+                value={value}
+                onChange={onChange}
+                onBlur={onBlur}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+        </View>
 
         <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-ink">Ejercicios</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setPickerOpen(true)}
-              className="flex-row items-center gap-1.5 rounded-full bg-primary-light px-3 py-1.5"
-            >
-              <Text className="text-sm font-semibold text-primary">+ Añadir ejercicio</Text>
-            </Pressable>
-          </View>
+          <Text className="text-xs font-bold uppercase tracking-wide text-ink-faint">
+            Ejercicios{blocks.length > 0 ? ` · ${blocks.length}` : ''}
+          </Text>
 
-          {blocks.length === 0 ? (
-            <Text className="text-sm text-ink-faint">
-              Todavía no añadiste ningún ejercicio.
-            </Text>
-          ) : (
-            <View className="gap-3">
-              {blocks.map((block, index) => (
-                <ExerciseBlockRow
-                  key={block.id}
-                  block={block}
-                  exerciseName={exerciseNameById.get(block.exerciseId) ?? 'Ejercicio no encontrado'}
-                  isFirst={index === 0}
-                  isLast={index === blocks.length - 1}
-                  onChange={(next) => updateBlock(index, next)}
-                  onMoveUp={() => moveBlock(index, -1)}
-                  onMoveDown={() => moveBlock(index, 1)}
-                  onRemove={() => removeBlock(index)}
-                />
-              ))}
-            </View>
-          )}
+          {blocks.map((block, index) => (
+            <ExerciseBlockCard
+              key={block.id}
+              block={block}
+              index={index}
+              exercise={exerciseById.get(block.exerciseId)}
+              expanded={expandedId === block.id}
+              isFirst={index === 0}
+              isLast={index === blocks.length - 1}
+              onToggle={() =>
+                setExpandedId((current) => (current === block.id ? null : block.id))
+              }
+              onChange={(next) => updateBlock(index, next)}
+              onMoveUp={() => moveBlock(index, -1)}
+              onMoveDown={() => moveBlock(index, 1)}
+              onRemove={() => removeBlock(index)}
+            />
+          ))}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setPickerOpen(true)}
+            className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-4 active:bg-surface-subtle"
+          >
+            <Text className="text-sm font-semibold text-primary">＋ Añadir ejercicio</Text>
+          </Pressable>
 
           {blocksError ? <Text className="text-sm text-red-500">{blocksError}</Text> : null}
         </View>
       </ScrollView>
 
       <View className="gap-3 border-t border-line px-5 py-3">
+        {blocks.length > 0 ? (
+          <Text className="text-center text-xs text-ink-faint">
+            {blocks.length} {blocks.length === 1 ? 'ejercicio' : 'ejercicios'} · {totalSets}{' '}
+            {totalSets === 1 ? 'serie' : 'series'} en total
+          </Text>
+        ) : null}
         <Button label={submitLabel} fullWidth loading={isSubmitting} onPress={submit} />
         {footer}
       </View>
 
-      <Modal visible={pickerOpen} animationType="slide" onRequestClose={() => setPickerOpen(false)}>
-        <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
-          <ScreenHeader title="Elegir Ejercicio" centered onBack={() => setPickerOpen(false)} />
-
-          <View className="pb-3">
-            <ChipGroup
-              options={MUSCLE_GROUP_FILTERS}
-              value={pickerMuscleGroup}
-              onChange={setPickerMuscleGroup}
-            />
-          </View>
-
-          {exercises.status === 'loading' ? (
-            <FeedbackState variant="loading" />
-          ) : exercises.status === 'error' ? (
-            <FeedbackState variant="error" message={exercises.error} />
-          ) : pickerExercises.length === 0 ? (
-            <FeedbackState variant="empty" message="No hay ejercicios en este grupo muscular." />
-          ) : (
-            <ScrollView contentContainerClassName="gap-3 px-5 pb-6" showsVerticalScrollIndicator={false}>
-              {pickerExercises.map((exercise) => (
-                <ExerciseListItem
-                  key={exercise.id}
-                  exercise={exercise}
-                  onPress={() => addBlock(exercise.id)}
-                />
-              ))}
-            </ScrollView>
-          )}
-        </SafeAreaView>
-      </Modal>
+      <ExercisePickerModal
+        visible={pickerOpen}
+        countByExerciseId={countByExerciseId}
+        onClose={() => setPickerOpen(false)}
+        onPick={addBlock}
+      />
     </View>
   );
 }

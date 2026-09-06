@@ -11,3 +11,7 @@ export {
   type ActivityFilter,
 } from './labels';
 export { useDashboardData } from './hooks/useDashboardData';
+export {
+  useDismissDashboardItem,
+  useRestoreDashboardItems,
+} from './hooks/useDashboardDismissals';

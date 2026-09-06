@@ -22,9 +22,26 @@ Documentos de referencia (leer antes de generar código si aplica a la tarea):
 
 ---
 
-## Estado actual (Fases 1 y 2 — COMPLETADAS)
+## ⚠️ Estado actual — Supabase-only (decidido 2026-09-06)
 
-La app está construida hasta el nivel de UI completa con **datos mock**, y la Fase 1
+**Ya no hay capa mock.** Toda la data va contra Supabase. Los `*Gateway.mock.ts` y los
+`*.mock.ts` de datos semilla **se borraron**; `src/gateways/index.tsx` y `app/_layout.tsx`
+inyectan siempre la implementación Supabase. `.env` (`EXPO_PUBLIC_SUPABASE_URL` +
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`) es **obligatorio** — `src/lib/supabase.ts` lanza si falta.
+`supabase/seed.sql` es la única fuente de la data de demo.
+
+Migraciones: `0001` … `0005` en `supabase/migrations/`. Aplicar con `npx supabase db push`.
+Edge Functions (`invite-client`, `delete-client`) deben estar desplegadas para que funcionen
+el alta y el borrado de clientes.
+
+El histórico por fases de abajo conserva su redacción original ("con mocks", "AsyncStorage",
+etc.) como registro de cómo se construyó cada cosa; la implementación viva es la de Supabase.
+
+---
+
+## Estado histórico (Fases 1 y 2 — COMPLETADAS)
+
+La app se construyó primero hasta UI completa con **datos mock**, y la Fase 1
 está **desplegada en EAS Hosting (web)**.
 
 **Qué existe:**
@@ -171,6 +188,8 @@ pantalla a su formulario.
   de reps, carga sugerida, descanso), `RoutinesGateway.get(id)` nuevo. Editor compartido
   `RoutineEditorForm` (`new.tsx`/`[id].tsx` en `app/(app)/(tabs)/routines/`): metadata + picker de
   ejercicios en un `<Modal>` + reordenar bloques con botones ↑/↓ (sin librería de drag-and-drop).
+  **Rediseñado después de la Fase 13** — ver sección "Rediseño del editor de rutinas"
+  (`RoutineSummaryCard`, `ExerciseBlockCard` colapsable, `ExercisePickerModal`).
   Asignar/desasignar rutina a un cliente se hace desde su perfil (tab Rutinas → "+ Asignar rutina"
   → elegir rutina + días) vía `ClientsGateway.assignRoutine`/`unassignRoutine`, que guardan un
   snapshot denormalizado en `ClientDetail.assignedRoutines` (no sincroniza `assignedCount` del
@@ -483,9 +502,245 @@ corre solo).
 **Pendiente de verificar:** el flujo end-to-end en la app (Expo web) contra Supabase real —
 las pruebas hechas son a nivel de API REST con JWTs de cada rol.
 
-**Huecos conocidos que quedan fuera:** `upcomingSessions` del dashboard; alta self-service de
-clientes (Edge Function que crea el usuario); Supabase Storage para avatares/portadas reales
-(siguen siendo placeholders); Realtime/offline-first (React Query refetch cubre el cross-device).
+**Huecos conocidos que quedan fuera:** `upcomingSessions` del dashboard; Supabase Storage para
+avatares/portadas reales (siguen siendo placeholders); Realtime/offline-first (React Query
+refetch cubre el cross-device).
+
+---
+
+## Fase 11 — Alta de clientes por invitación + política de datos + borrado en cascada — CÓDIGO COMPLETO (pendiente aplicar/deploy + verificar)
+
+Tres requisitos de producto juntos: el entrenador da de alta al cliente y este recibe un email
+para crear su contraseña; política de tratamiento de datos con aceptación obligatoria; y que al
+eliminar un cliente se borre **toda** su data y su cuenta de Auth.
+
+**Qué se hizo:**
+1. **Migración `0003_phase11_consent_access.sql`**:
+   - `user_consents (user_id pk → auth.users on delete cascade, policy_version, accepted_at)`,
+     RLS: el usuario gestiona solo su fila.
+   - `client_access_status(cid)` → `'none' | 'invited' | 'active'` para el coach dueño (lee
+     `email_confirmed_at`).
+   - `consent_report()` → registro auditable (la aceptación del coach + la de sus clientes, con
+     email/nombre/rol); base del botón "Descargar reporte" de Configuración.
+2. **Edge Functions** (`supabase/functions/`, Deno; `_shared/` = cors + admin client + `getCaller`):
+   - `invite-client` `POST { clientId }` — valida coach dueño, lee email/nombre de la fila,
+     `admin.inviteUserByEmail` con `user_metadata { role:'client', name, client_id }` +
+     `redirectTo = INVITE_REDIRECT_URL`, guarda `clients.client_user_id`. Reenvío: borra el
+     usuario sin confirmar y re-invita.
+   - `delete-client` `POST { clientId }` — `delete from clients` (cascada) + `admin.deleteUser`.
+3. **`AuthGateway` crece**: `getConsent` / `acceptConsent` / `getConsentReport`. Impl mock
+   (`secureStorage`) y Supabase (`user_consents` + `rpc('consent_report')`). `authStore` gana
+   `consent` / `consentReady` (se cargan tras `restore()`/`login()`), `acceptConsent`,
+   `refreshConsent`, `fetchConsentReport`.
+4. **Gate de consentimiento**: `src/features/auth/policy.ts` (texto siguiendo la Ley 1581/2012,
+   **borrador — requiere revisión jurídica**; datos del Responsable en `responsable.ts`, con
+   placeholders a rellenar), `PrivacyPolicyView`, `useConsent()` (`needsConsent`). Rutas raíz:
+   `app/privacy.tsx` (pública), `app/privacy-consent.tsx` (gate: aceptar → entra; no aceptar →
+   logout), `app/set-password.tsx` (destino del enlace de invitación: establece sesión desde el
+   token de la URL → form de contraseña → `updateUser` → `restore()` → gate → vista). Guards en
+   `app/index.tsx`, `(app)/_layout.tsx`, `(client)/_layout.tsx` redirigen a `/privacy-consent`
+   si falta aceptar. `(auth)/_layout.tsx` y `LoginForm` delegan en `index`.
+5. **UI del coach**: `ClientsGateway` gana `invite(clientId)` / `accessStatus(clientId)`;
+   `remove()` pasa a invocar `delete-client`. `ClientAccessCard` (feature `clients`) en una
+   `CollapsibleSection` "Acceso a la app" del perfil. `clients/new.tsx` auto-invita si la ficha
+   trae email. `clients/[id]/edit.tsx` — copy de borrado actualizado. `(app)/settings.tsx` deja
+   de ser placeholder: enlace a la política + "Descargar reporte de consentimientos (CSV)"
+   (`src/lib/{csv,download}.ts`; en web descarga, en nativo comparte).
+6. `profile.tsx` del coach: `Alert.alert` → `confirm()` (bug de web) + fila a la política.
+
+**Pasos para activarlo:**
+```
+npx supabase db push                                  # aplica 0003
+npx supabase functions deploy invite-client delete-client
+npx supabase secrets set INVITE_REDIRECT_URL=https://<web-host>/set-password
+```
+Dashboard → Auth → URL Configuration: añadir `https://<web-host>/set-password` (y
+`https://<web-host>/**`) a la allowlist de redirects. Auth → Email Templates → "Invite user":
+personalizar copy en español. Rellenar `src/features/auth/responsable.ts` y hacer revisar
+`policy.ts` por un abogado.
+
+**Pendiente de verificar:** flujo completo del enlace de invitación (`set-password` usa
+`setSession`/`exchangeCodeForSession` según el formato del enlace — puede necesitar ajuste
+contra el enlace real de Supabase); reenvío de invitación; borrado en cascada end-to-end.
+
+**Fuera de alcance (fases futuras anotadas por el usuario):** integración WhatsApp Business Cloud
+API (analizada: requiere Meta Business verificado, número dedicado, plantillas aprobadas y coste
+por conversación). — La gestión de "actividad reciente" / "logros" se hizo en la Fase 13 y el
+rediseño visual del editor de rutinas también está hecho (ver secciones más abajo).
+
+---
+
+## Fase 12 — Comidas y alimentos en los planes de alimentación — CÓDIGO COMPLETO (pendiente aplicar `0004` + verificar)
+
+Un plan de alimentación deja de ser "solo objetivo": se arma por **comidas** con **alimentos**
+del catálogo y cantidades, y las kcal/macros se **calculan** de ese contenido.
+
+**Qué se hizo:**
+1. **Nueva feature `foods`** (`src/features/foods/`, calcado de `exercises`): catálogo de
+   alimentos del coach — `unit` (`g`/`ml`/`unidad`), `refQuantity` (100 o 1) y macros
+   (`kcal`/`proteinG`/`carbsG`/`fatG`) por esa porción. Gateway ×3 (interfaz + mock
+   `@navyteam/foods` + Supabase), hooks, `FoodListItem`, `FoodEditorForm`, pantallas
+   `app/(app)/foods/` + entrada en el Drawer ("Alimentos"). Seed de ~24 alimentos comunes.
+2. **`src/features/nutrition/nutritionMath.ts`** (lógica pura, reusada por mock y Supabase —
+   patrón `workouts/progress.ts`): `itemTotals`, `mealInputTotals`, `gramsToMacroPct`,
+   `buildPlanDetail` (ensambla comidas resueltas + totales), `toPlanSummary`.
+3. **Tipos** (`src/types/{food,nutrition}.ts`): `Food`, `Meal`/`MealItem` (lectura) y
+   `MealInput`/`MealItemInput` (escritura); `NutritionPlan` gana `targetKcalPerDay` (objetivo
+   opcional), `mealCount`, y `kcalPerDay`/`macros` pasan a ser **derivados**;
+   `NutritionPlanDetail extends NutritionPlan` con `meals` + `totals`.
+4. **`NutritionGateway`**: nuevo `get(id)`; `create`/`update` reciben `meals` (replace-all,
+   como `RoutinesGateway` con `blocks`); `list()` devuelve resúmenes con totales calculados.
+   Mock + Supabase actualizados. Hook `useNutritionPlan(id)`.
+5. **Migración `0004_phase12_nutrition_meals.sql`**: tabla `foods` (+RLS coach/cliente),
+   `nutrition_meals` + `nutrition_meal_items` (+RLS), y en `nutrition_plans` se añade
+   `target_kcal_per_day` (backfill desde `kcal_per_day`) y se **eliminan** `kcal_per_day`,
+   `protein_pct`, `carbs_pct`, `fat_pct` (eran placeholder). `supabase/seed.sql` actualizado
+   (foods + planes con comidas de ejemplo en nut_001/nut_002).
+6. **UI**: `NutritionPlanForm` rediseñado — metadata + constructor de comidas (`MealEditorCard`,
+   `MealItemRow`, `FoodPickerModal`) + `PlanTotalsCard` con el total en vivo vs. el objetivo.
+   `NutritionPlanDetail` rediseñado (total + comidas plegables con kcal por item + notas).
+   `NutritionPlanCard` y la vista de cliente muestran el kcal calculado. `NumberField` gana
+   `decimal` (macros con decimales) y `label` opcional.
+7. **`clientsGateway.supabase.ts`**: el embed del plan asignado (`ClientDetail.assignedPlan`,
+   también usado por la **lista** de clientes) dejó de pedir `kcal_per_day` (columna eliminada
+   en `0004` → error `42703` al consultar usuarios). Ahora embebe
+   `nutrition_meals(nutrition_meal_items(quantity, foods(ref_quantity, kcal)))` y calcula
+   `kcalPerDay` con la misma regla que `buildPlanDetail` (suma de comidas, o el objetivo si el
+   plan no tiene alimentos).
+
+**Para activarlo:** `npx supabase db push` (aplica `0004`) + re-pegar `supabase/seed.sql` en
+el SQL Editor (o solo la sección de `foods`/comidas si ya hay datos).
+
+**Pendiente de verificar:** flujo completo en la app (crear plan con comidas → total en vivo →
+guardar → reabrir → vista de cliente); y el mismo contra Supabase tras aplicar `0004`.
+
+**Fuera de alcance:** que el cliente registre lo que comió / adherencia; variación por día de
+la semana; import de bases de datos externas de alimentos.
+
+---
+
+## Fase 13 — Ocultar entradas del panel (feed + logros) — CÓDIGO COMPLETO (pendiente aplicar `0005` + verificar)
+
+El entrenador puede **ocultar** entradas de "Actividad reciente" y "Logros de la semana"
+**deslizando la fila**; se guarda por entrenador y sobrevive recargas, con "Mostrar ocultos (N)"
+para restaurarlas.
+
+**Qué se hizo:**
+1. **Migración `0005_phase13_dashboard_dismissals.sql`**: tabla `dashboard_dismissals`
+   `(coach_id, item_key) pk` + RLS (`coach_id = auth.uid()`). El `item_key` es el `id` estable
+   de cada `ActivityItem` / `Achievement` (ya lo generan los gateways de la Fase 10).
+2. **`DashboardGateway`** gana `dismiss(itemKey)` / `restoreDismissed()`; `DashboardData` gana
+   `dismissedCount`. Mock: AsyncStorage `@navyteam/dashboard-dismissals` (el seed se filtra al
+   leer). Supabase: `select`/`upsert`/`delete` sobre `dashboard_dismissals`, `get()` filtra
+   `recentActivity` + `weeklyAchievements` antes del `slice(12)`.
+3. **`src/components/SwipeToDismiss.tsx`** (nuevo): envuelve una fila con `Swipeable` de
+   `react-native-gesture-handler` (ya instalado; `GestureHandlerRootView` ya está en la raíz) —
+   swipe → panel rojo "Ocultar" → `onDismiss`.
+4. **`app/(app)/(tabs)/dashboard.tsx`**: cada `AchievementRow` / `ActivityRow` va envuelta en
+   `SwipeToDismiss` (→ `useDismissDashboardItem`); enlace "Mostrar ocultos (N)"
+   (→ `useRestoreDashboardItems`) al pie de "Actividad reciente".
+
+**Para activarlo:** `npx supabase db push` (aplica `0005`). Contra el mock ya funciona.
+
+**Fuera de alcance:** notificaciones push (`expo-notifications`); bandeja de notificaciones con
+leído/no-leído; ocultar `stats` / `upcomingSessions`.
+
+---
+
+## Rediseño del editor de rutinas — COMPLETADO
+
+Pedido por el usuario junto con las Fases 11–13 ("en la edición de rutina mejoremos el aspecto
+visual, hagámoslo más llamativo"). Solo UI del editor compartido (`new.tsx` / `[id].tsx`), sin
+tocar el modelo de datos ni el Gateway.
+
+**Qué se hizo:**
+1. **`RoutineSummaryCard`** (nuevo) — cabecera `bg-primary-light` en lo alto del editor: nombre
+   de la rutina, pills de categoría/nivel y 3 cifras **en vivo** (ejercicios · series totales ·
+   minutos) que se recalculan mientras se edita. `RoutineEditorForm` pasó a usar `watch()` de RHF
+   para alimentarla.
+2. **`ExerciseBlockCard`** (nuevo, reemplaza `ExerciseBlockRow`) — bloque **colapsable**:
+   cabecera siempre visible (nº de orden + icono del grupo muscular + nombre + resumen
+   `3 × 8–12`); al desplegar aparecen los campos reordenados (Series/Descanso, "Reps por serie"
+   con mín–máx en línea, Carga sugerida) y los controles ↑/↓/Quitar. Solo un bloque abierto a la
+   vez (`expandedId`); al añadir uno se abre automáticamente.
+3. **`ExercisePickerModal`** (nuevo, extraído de `RoutineEditorForm`) — buscador (`SearchField`,
+   sin acentos) + chips de grupo muscular; marca "Añadido" / "×N" en los ejercicios que ya están
+   en la rutina (se permiten repetidos para superseries). Pie con "N de M ejercicios".
+4. **`MUSCLE_GROUP_ICON`** subió de privado en `ExerciseListItem` a `exercises/labels.ts`
+   (exportado por el barrel) y lo comparten la lista y el editor. `ExerciseListItem` gana
+   `rightSlot?` para el badge del picker.
+5. **Estado vacío / añadir** = botón punteado `＋ Añadir ejercicio` (mismo patrón que el editor
+   de comidas de la Fase 12). El footer pegado muestra un resumen ("N ejercicios · N series").
+
+La vista de solo lectura (`RoutineBlockList` / `AssignedRoutineView`, cliente) **no cambió**.
+
+---
+
+## Fase 15 — Notificaciones (bandeja in-app + push) — CÓDIGO COMPLETO (pendiente aplicar `0006`, desplegar `send-push` y verificar el banner OS con un build nativo)
+
+Bandeja de notificaciones para ambos roles + entrega push (Expo Push API). El **push real
+no se puede probar en web ni Expo Go** (requiere un *development build* de EAS); la **bandeja
+in-app + Realtime** sí funciona en web.
+
+**Qué se hizo:**
+1. **Migración `0006_phase15_notifications.sql`**:
+   - `push_tokens (token pk, user_id, platform)` — RLS: el usuario gestiona los suyos.
+   - `notifications (id, user_id, kind, title, body, data jsonb, read_at, pushed_at, created_at)`
+     — RLS: el destinatario lee / marca leído / borra lo suyo; **sin INSERT** (solo los triggers).
+   - `app_config (key, value)` — config interna (URL de las funciones + secreto del hook), sin
+     acceso para `authenticated`.
+   - `public._notify(user, kind, title, body, data)` (SECURITY DEFINER, **revocada de PostgREST**):
+     inserta la fila y dispara `send-push` vía `pg_net` si `app_config` tiene `edge_url` (best-effort).
+   - Triggers de dominio → `_notify()`: `messages` (avisa a la otra parte), `workout_sessions`
+     (si lo registró el cliente → avisa al coach), `client_routines` (rutina asignada → cliente),
+     `clients.nutrition_plan_id` (plan asignado → cliente), `payments` (pago → cliente).
+   - `notifications` añadida a la publicación `supabase_realtime`.
+2. **Edge Function `send-push`** (`supabase/functions/send-push/`, `--no-verify-jwt`, protegida
+   con `x-push-secret` == env `PUSH_HOOK_SECRET`): carga la notificación + los `push_tokens` del
+   destinatario, envía a `https://exp.host/--/api/v2/push/send` en lotes de 100, borra los tokens
+   `DeviceNotRegistered`, marca `pushed_at`.
+3. **Feature `src/features/notifications/`**: `NotificationsGateway` (`list`/`markRead`/`markAllRead`/
+   `remove`/`registerToken`/`unregisterToken`/`subscribe`) + impl Supabase; hooks
+   (`useNotifications`, `useUnreadNotificationCount`, mutaciones); `labels.ts`
+   (`NOTIFICATION_KIND_META`, `routeForNotification(data, role)`); `push.ts` (envoltorio de
+   `expo-notifications`, **no-op en web / simulador**); `NotificationsBridge` (montado en
+   `app/_layout.tsx`: registra el token al login, enruta al tocar una notificación, refresca la
+   bandeja por push en primer plano y por Realtime `INSERT`).
+4. **UI**: `NotificationBell` (campana + contador) en la cabecera del panel del coach y del home
+   del cliente; `NotificationsScreen` (bandeja compartida, `SwipeToDismiss` con "Eliminar",
+   pull-to-refresh) en `app/(app)/notifications.tsx` (Drawer) y `app/(client)/notifications.tsx`
+   (tab oculto). Entrada "Notificaciones" en el Drawer con badge en vivo (se quitó el `badge: 2`
+   hardcodeado de "Mensajes").
+5. **Deps nuevas**: `expo-notifications`, `expo-device` (vía `npx expo install`); plugin
+   `expo-notifications` en `app.json`.
+
+**"Actividad reciente" del panel** (pedido junto con esta fase):
+- El feed se limita a los **últimos 30 días** (antes no tenía ventana → mediciones de 2025
+  colgadas). `ActivityItem` gana `entityId` y las filas son **pulsables** → detalle de la sesión /
+  perfil del cliente / hilo de mensajes. Pull-to-refresh en el panel. Ocultar una entrada sigue
+  siendo deslizar la fila (Fase 13).
+- La "data de pruebas" del seed se borra con `supabase/cleanup_demo_activity.sql` (lo ejecuta el
+  usuario; borra `wko_*` / `msr_*` / `msg_*`, conserva el catálogo).
+- "Que la actividad del cliente le llegue al coach": el trigger de `workout_sessions` genera la
+  notificación; el panel refresca por Realtime + pull-to-refresh.
+
+**Pasos para activar el push:**
+```
+npx supabase db push                                   # aplica 0006
+npx supabase functions deploy send-push --no-verify-jwt
+npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>
+# En el SQL Editor:
+insert into public.app_config(key,value) values
+  ('edge_url','https://<ref>.supabase.co/functions/v1'),
+  ('push_secret','<el mismo aleatorio>')
+on conflict (key) do update set value = excluded.value;
+```
+El banner del sistema operativo requiere además `eas.json` + `expo-dev-client` + `eas build`
+(pendiente — pipeline de build, Fase 15/Futuro).
+
+**Fuera de alcance:** `eas.json` / dev build; preferencias por tipo de notificación; recordatorios
+de sesión programados (`pg_cron`); badge de icono de app; agrupación / centro de notificaciones
+con estados avanzados.
 
 ---
 
@@ -536,8 +791,9 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - NativeWind v4 + Tailwind (estilos) · `@expo/vector-icons` (iconos)
 - `@react-navigation/drawer` (menú lateral) + peers de Expo Router / NativeWind
   (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-safe-area-context`, `react-native-screens`)
-- `@tanstack/react-query` (cache + invalidación) · `@react-native-async-storage/async-storage`
-  (persistencia de los Gateways mock)
+- `@tanstack/react-query` (cache + invalidación)
+- `@react-native-async-storage/async-storage` — **sin uso** desde que se quitó la capa mock;
+  se puede desinstalar (`npm uninstall`) en una limpieza aparte.
 - `react-native-gifted-charts` + `react-native-svg` (peer obligatorio) + `expo-linear-gradient`
   (peer que el paquete resuelve de forma no perezosa al importar, aunque no se usen gradientes —
   ver Fase 6) — gráfica de evolución de peso del perfil de cliente y de progresión de carga
@@ -545,6 +801,8 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 - `@supabase/supabase-js` — backend real (Fase 9: Auth; Fase 10: resto de Gateways).
 - `expo-secure-store` — persistencia de sesión en nativo (ver `src/lib/secureStorage.ts` para
   el fallback en web, que no lo soporta).
+- `expo-notifications` + `expo-device` — notificaciones push (Fase 15). El push remoto **no
+  funciona en web ni Expo Go**; `src/features/notifications/push.ts` degrada a no-op ahí.
 - Dev: `eas-cli`, `supabase` (CLI — migraciones/seed de la Fase 10), `babel-preset-expo`, `tailwindcss`
 
 **Previsto para más adelante (instalar cuando toque, con confirmación):**
@@ -558,15 +816,15 @@ consuma los módulos. Al llegar ese momento: `packages/feature-*`, `packages/ui`
 
 ```
 app/                          # Expo Router (rutas = pantallas)
-  _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider
+  _layout.tsx                 # Stack raíz + QueryClientProvider + GatewaysProvider + NotificationsBridge
   index.tsx                   # redirect según sesión y rol → (app) coach | (client) | (auth)
   (auth)/
     _layout.tsx               # si hay sesión → área según rol
     login.tsx
   (client)/                   # área del CLIENTE (Fase 8). Guard de rol. Sin Drawer.
-    _layout.tsx               # Tabs (Inicio, Alimentación, Mis entrenos, Cuenta) + messages (href:null)
-    routine.tsx               # tab "Inicio" (home: saludo + CoachMessageCard + hoy + semana + rutinas)
-    nutrition.tsx · account.tsx · messages.tsx (hilo con el entrenador, se abre desde el home)
+    _layout.tsx               # Tabs (Inicio, Alimentación, Mis entrenos, Cuenta) + messages/notifications (href:null)
+    routine.tsx               # tab "Inicio" (home: saludo + CoachMessageCard + hoy + semana + rutinas + campana)
+    nutrition.tsx · account.tsx · messages.tsx (hilo con el entrenador) · notifications.tsx (bandeja)
     workouts/                 # _layout.tsx (Stack) + index.tsx + start.tsx (modal, entreno en
                                #   curso) + log.tsx (modal, registro manual) + [sessionId].tsx
   (app)/                      # área del ENTRENADOR. Guard de sesión + rebota clientes a (client).
@@ -588,6 +846,7 @@ app/                          # Expo Router (rutas = pantallas)
     exercises/                # catálogo de ejercicios (fuera de las tabs, con entrada en el Drawer)
                                #   _layout.tsx (Stack) + index.tsx + new.tsx (modal) + [id].tsx (modal)
     messages.tsx              # lista de conversaciones (Drawer) → feature messages
+    notifications.tsx         # bandeja de notificaciones (Drawer) → feature notifications
     stats.tsx                 # placeholder (Drawer)
     settings.tsx              # placeholder (Drawer)
     support.tsx               # placeholder (Drawer)
@@ -603,10 +862,15 @@ src/
     dashboard/                # tab Inicio
     clients/                  # clientes + perfil (mediciones, suscripción/pagos, asignación de rutinas)
     messages/                 # hilo entrenador↔cliente (MessageThread compartido, CoachMessageCard)
-    routines/                 # catálogo + editor con bloques + vista solo-lectura (RoutineBlockList,
+    notifications/            # bandeja in-app + push (gateway + NotificationsBridge + push.ts +
+                               #   NotificationBell + NotificationsScreen). Triggers de BD en 0006.
+    routines/                 # catálogo + editor (RoutineSummaryCard + ExerciseBlockCard colapsable
+                               #   + ExercisePickerModal) + vista solo-lectura (RoutineBlockList,
                                #   AssignedRoutineView) para la vista de cliente
-    nutrition/                # catálogo + editor + NutritionPlanDetail (solo lectura, vista de cliente)
+    nutrition/                # planes por comidas + editor (MealEditorCard/FoodPickerModal) +
+                               #   nutritionMath.ts (cálculo puro) + NutritionPlanDetail (vista de cliente)
     exercises/                # catálogo de ejercicios (usado por el editor de rutinas)
+    foods/                    # catálogo de alimentos (usado por el editor de planes) — patrón exercises
     workouts/                 # registro de entrenamientos + seguimiento (progress.ts = lógica pura,
                                #   logging.ts = helpers de borrador compartidos). SessionLoggerForm
                                #   (registro manual) y SessionDetailView los usan entrenador y cliente;
@@ -618,25 +882,29 @@ src/
       hooks/
       labels.ts               # mapeo enum → etiqueta/tono de UI
       store/
-      mocks/                  # *.mock.ts (datos semilla) + <x>Gateway.mock.ts (implementación
-                               # mock persistida en AsyncStorage)
-  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition, exercise, workout)
+      supabase/               # <x>Gateway.supabase.ts (implementación real, única)
+  types/                      # tipos de dominio (auth, dashboard, client, routine, nutrition, exercise, workout, food, notification)
 ```
 
 ---
 
-## Mocks
+## Datos — Supabase
 
-Mientras un módulo no tenga backend real, su data sale de un mock que:
-- Simula latencia (delay 500–1000ms) para ver los estados de loading.
-- Incluye al menos un caso de error.
-- Implementa **la misma interfaz `Gateway`** que tendrá la versión real, para que el swap sea
-  cambio de implementación, no de interfaz.
-- Desde la Fase 3, además **persiste en AsyncStorage** (create/update/remove sobreviven al
-  recargar). El `*.mock.ts` de datos actual sirve de **seed** cuando el storage está vacío.
+Cada feature define su interfaz `Gateway` (`src/features/<x>/gateway.ts`) y su única
+implementación en `src/features/<x>/supabase/<x>Gateway.supabase.ts`. `src/gateways/index.tsx`
+(y `configureAuthGateway` en `app/_layout.tsx`) las inyectan. La UI y los hooks hablan con la
+interfaz, **nunca** con `@supabase/supabase-js` directamente.
 
-Los mocks **no se borran** al conectar el backend: pasan a ser la implementación de referencia
-para tests y desarrollo offline.
+- Lógica derivada pura (sin I/O) vive fuera del Gateway y se reutiliza:
+  `src/features/workouts/progress.ts`, `src/features/nutrition/nutritionMath.ts`,
+  `src/features/clients/subscription.ts`.
+- Consultas anidadas con embeds de PostgREST; helpers en `src/lib/supabaseQuery.ts`
+  (`unwrap` / `unwrapRequired` / `unwrapList`).
+- Fechas: las columnas son `date`/`timestamptz`; los tipos de dominio usan strings
+  `dd/mm/aaaa` — conversión en el borde del Gateway (`ddmmaaaaToIso`/`isoToDdmmaaaa`).
+- Operaciones que necesitan `service_role` (crear/borrar usuarios de Auth) van en Edge
+  Functions (`supabase/functions/`), nunca en la app.
+- Data de demo: `supabase/seed.sql` (fuente única). Migraciones: `supabase/migrations/`.
 
 ---
 
@@ -645,8 +913,6 @@ para tests y desarrollo offline.
 - TypeScript estricto: sin `any`, tipar todas las props y retornos de función.
 - Componentes funcionales con hooks, sin clases.
 - Un componente por archivo; nombre de archivo = nombre del componente (`LoginForm.tsx`).
-- Mocks con sufijo `.mock.ts`.
-- Comentar con `// TODO(backend):` los puntos donde una implementación real reemplazará al mock.
 - Imports internos con alias `@/*` → `src/*`.
 - Estilos con NativeWind (`className`); colores solo desde tokens del tema (`primary`, `ink`, …).
 
@@ -671,7 +937,9 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 ## Testing (si se pide)
 
 - Jest + React Native Testing Library + `jest-expo`.
-- Los tests usan la implementación mock del `Gateway`; no requieren mockear red.
+- Sin capa mock: para probar Gateways se necesita un proyecto Supabase de test, o `msw` /
+  dobles a nivel de `@supabase/supabase-js`. La lógica pura (`progress.ts`, `nutritionMath.ts`,
+  `subscription.ts`) se testea directa, sin red.
 - Cubrir: validación de formularios, estados idle/loading/error/success, guards de navegación.
 
 ---
@@ -683,11 +951,21 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 - Añadir librerías no previstas en "Stack".
 - Bajar/subir la versión del SDK de Expo.
 - Cambiar el proveedor de estilos (NativeWind) o de navegación (Expo Router).
-- Borrar los mocks en lugar de mantenerlos como implementación del Gateway.
+- Cambiar el proveedor de datos (Supabase) o volver a introducir una capa mock/offline.
 
 ---
 
 ## Roadmap de fases
+
+> **Activación pendiente (bloqueante para la app contra Supabase real):**
+> `npx supabase db push` (aplica `0003`+`0004`+`0005`+`0006`) · re-pegar `supabase/seed.sql` en
+> el SQL Editor · re-enlazar el usuario cliente (`update public.clients set client_user_id =
+> (select id from auth.users where email='cliente@navyteam.com') where id='cli_luis';`) ·
+> `npx supabase functions deploy invite-client delete-client` ·
+> `npx supabase functions deploy send-push --no-verify-jwt` ·
+> `npx supabase secrets set INVITE_REDIRECT_URL=https://<host-web>/set-password` ·
+> `npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>` + fila `app_config` (ver Fase 15) ·
+> (opcional, limpieza) `supabase/cleanup_demo_activity.sql`.
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
 2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
@@ -700,6 +978,24 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 9. ✅ **Fase 9** — Backend real de autenticación **multi-rol** con Supabase (`AuthGateway` +
    `supabaseAuthGateway` + persistencia de sesión + refresh), verificado para ambos roles.
 10. ✅ **Fase 10** — Conectar todos los Gateways a Supabase (esquema BD + RLS por rol en `0001`+`0002`, 7 Gateways `*.supabase.ts`, dashboard con composición real parcial). Migración aplicada al proyecto real; RLS de coach y cliente verificada por API. Pendiente: verificación end-to-end en la app.
-11. **Fase 11** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
+11. 🚧 **Fase 11** — Alta de clientes por **invitación de email** (Edge Functions `invite-client` /
+    `delete-client`) + **política de tratamiento de datos** con aceptación obligatoria y reporte
+    auditable + **borrado en cascada** real (datos + cuenta de Auth). Código completo; pendiente
+    aplicar `0003`, desplegar las funciones y verificar el flujo del enlace.
+12. 🚧 **Fase 12** — **Comidas y alimentos en los planes** (catálogo `foods`, editor por comidas
+    con `FoodPickerModal`, cálculo de kcal/macros en `nutritionMath.ts`, migración `0004`).
+    Código completo; pendiente aplicar `0004` y verificar.
+13. 🚧 **Fase 13** — **Ocultar entradas del panel** (feed + logros) deslizando la fila;
+    `dashboard_dismissals` + `SwipeToDismiss`. Código completo; pendiente aplicar `0005`.
+14. 🚧 **Fase 15** — **Notificaciones** (bandeja in-app + push): tablas `notifications` /
+    `push_tokens`, triggers de dominio → `_notify()`, Edge Function `send-push` (Expo Push API),
+    `NotificationsBridge` + campana + bandeja. Migración `0006`. Código completo; pendiente aplicar
+    `0006`, desplegar `send-push`, y verificar el banner OS con un build nativo. Incluye el
+    rework de "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
+15. **Fase 14** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
-12. **Futuro** — Monorepo + extracción de módulos; offline-first; notificaciones (recordatorio de sesión, cliente registró entreno); chat cliente–entrenador; EAS Build + tiendas.
+16. **Futuro** — Integración WhatsApp; `eas.json` + dev build + banner OS del push; recordatorios
+    programados (`pg_cron`); monorepo + extracción de módulos; offline-first; EAS Build + tiendas.
+
+✅ **Rediseño del editor de rutinas** (post-Fase 13) — cabecera con cifras en vivo, bloques de
+ejercicio colapsables, picker con buscador. Ver sección "Rediseño del editor de rutinas".

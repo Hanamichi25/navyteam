@@ -59,3 +59,24 @@ export interface Session {
   user: User;
   expiresAt: number;
 }
+
+/**
+ * Aceptación de la Política de Tratamiento de Datos Personales por el usuario.
+ * `policyVersion` permite volver a pedir consentimiento si la política cambia.
+ */
+export interface Consent {
+  policyVersion: string;
+  /** Marca de tiempo ISO 8601. */
+  acceptedAt: string;
+}
+
+/** Fila del registro auditable de aceptaciones de la política (reporte del coach). */
+export interface ConsentRecord {
+  userId: string;
+  email: string;
+  name: string;
+  role: string;
+  policyVersion: string;
+  /** Marca de tiempo ISO 8601. */
+  acceptedAt: string;
+}

@@ -25,10 +25,8 @@ export function LoginForm(): React.JSX.Element {
   const onSubmit = handleSubmit(async (values) => {
     const ok = await login(values);
     if (ok) {
-      const role = useAuthStore.getState().user?.role;
-      router.replace(
-        role === 'client' ? '/(client)/routine' : '/(app)/(tabs)/dashboard',
-      );
+      // `index` decide: gate de consentimiento primero, luego el área según el rol.
+      router.replace('/');
     }
   });
 

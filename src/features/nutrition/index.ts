@@ -4,6 +4,7 @@ export { NutritionPlanForm } from './components/NutritionPlanForm';
 export type { NutritionGateway } from './gateway';
 export {
   useCreateNutritionPlan,
+  useNutritionPlan,
   useNutritionPlans,
   useRemoveNutritionPlan,
   useUpdateNutritionPlan,

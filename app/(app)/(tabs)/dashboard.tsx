@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { Redirect, useNavigation, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { ChipGroup } from '@/components/ChipGroup';
 import { FeedbackState } from '@/components/FeedbackState';
 import { PeriodToggle } from '@/components/PeriodToggle';
+import { SwipeToDismiss } from '@/components/SwipeToDismiss';
 import { useAuthStore } from '@/features/auth';
+import { NotificationBell } from '@/features/notifications';
+import { COLORS } from '@/lib/colors';
 import {
   AchievementRow,
   ACTIVITY_FILTERS,
@@ -17,11 +21,13 @@ import {
   SessionRow,
   StatCard,
   useDashboardData,
+  useDismissDashboardItem,
+  useRestoreDashboardItems,
   type ActivityFilter,
 } from '@/features/dashboard';
 import { todayShortLabel } from '@/lib/date';
 import { openDrawer } from '@/lib/openDrawer';
-import type { DashboardPeriod } from '@/types/dashboard';
+import type { ActivityItem, DashboardPeriod } from '@/types/dashboard';
 
 const PERIOD_OPTIONS: readonly { value: DashboardPeriod; label: string }[] = [
   { value: 'week', label: 'Semana' },
@@ -31,12 +37,33 @@ const PERIOD_OPTIONS: readonly { value: DashboardPeriod; label: string }[] = [
 export default function DashboardScreen(): React.JSX.Element {
   const navigation = useNavigation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const dashboard = useDashboardData();
+  const dismissItem = useDismissDashboardItem();
+  const restoreItems = useRestoreDashboardItems();
 
   const [period, setPeriod] = useState<DashboardPeriod>('month');
   const [openSessionId, setOpenSessionId] = useState<string | null>(null);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async (): Promise<void> => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    setRefreshing(false);
+  };
+
+  const openActivity = (item: ActivityItem): void => {
+    if (!item.clientId) return;
+    if (item.kind === 'workout' && item.entityId) {
+      router.push(`/(app)/(tabs)/clients/${item.clientId}/session/${item.entityId}`);
+    } else if (item.kind === 'message') {
+      router.push(`/(app)/(tabs)/clients/${item.clientId}/messages`);
+    } else {
+      router.push(`/(app)/(tabs)/clients/${item.clientId}`);
+    }
+  };
 
   if (!user) {
     return <Redirect href="/(auth)/login" />;
@@ -84,13 +111,16 @@ export default function DashboardScreen(): React.JSX.Element {
             </Text>
           </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Abrir menú"
-          onPress={openMenu}
-        >
-          <Avatar uri={user.avatarUrl} size={40} />
-        </Pressable>
+        <View className="flex-row items-center gap-2.5">
+          <NotificationBell onPress={() => router.push('/(app)/notifications')} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Abrir menú"
+            onPress={openMenu}
+          >
+            <Avatar uri={user.avatarUrl} size={40} />
+          </Pressable>
+        </View>
       </View>
 
       {dashboard.status === 'loading' ? (
@@ -102,6 +132,13 @@ export default function DashboardScreen(): React.JSX.Element {
           className="flex-1"
           contentContainerClassName="pb-8 pt-1 gap-6"
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+            />
+          }
         >
           {nextSession ? (
             <View className="px-5">
@@ -139,13 +176,17 @@ export default function DashboardScreen(): React.JSX.Element {
               </Text>
             ) : (
               dashboard.data.weeklyAchievements.map((achievement) => (
-                <AchievementRow
+                <SwipeToDismiss
                   key={achievement.id}
-                  item={achievement}
-                  onPress={() =>
-                    openAchievement(achievement.clientId, achievement.exerciseId)
-                  }
-                />
+                  onDismiss={() => dismissItem.mutate(achievement.id)}
+                >
+                  <AchievementRow
+                    item={achievement}
+                    onPress={() =>
+                      openAchievement(achievement.clientId, achievement.exerciseId)
+                    }
+                  />
+                </SwipeToDismiss>
               ))
             )}
           </View>
@@ -195,8 +236,24 @@ export default function DashboardScreen(): React.JSX.Element {
                   Sin actividad de este tipo.
                 </Text>
               ) : (
-                activity.map((item) => <ActivityRow key={item.id} item={item} />)
+                activity.map((item) => (
+                  <SwipeToDismiss key={item.id} onDismiss={() => dismissItem.mutate(item.id)}>
+                    <ActivityRow item={item} onPress={() => openActivity(item)} />
+                  </SwipeToDismiss>
+                ))
               )}
+
+              {data && data.dismissedCount > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => restoreItems.mutate()}
+                  className="self-start pt-1"
+                >
+                  <Text className="text-xs font-semibold text-primary">
+                    Mostrar ocultos ({data.dismissedCount})
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </ScrollView>

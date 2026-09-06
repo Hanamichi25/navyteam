@@ -9,6 +9,7 @@ export {
 } from './hooks/useExercises';
 export {
   MUSCLE_GROUP_FILTERS,
+  MUSCLE_GROUP_ICON,
   MUSCLE_GROUP_LABEL,
   MUSCLE_GROUP_OPTIONS,
   type MuscleGroupFilter,

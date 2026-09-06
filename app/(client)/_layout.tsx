@@ -3,7 +3,7 @@ import { Redirect, Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuthStore } from '@/features/auth';
+import { useAuthStore, useConsent } from '@/features/auth';
 import { COLORS } from '@/lib/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -18,12 +18,19 @@ function tabIcon(active: IoniconName, inactive: IoniconName) {
  * Área del **cliente** (Fase 8). Tabs simples, sin Drawer. Redirige a Login si no
  * hay sesión y al panel del entrenador si el usuario no es un cliente.
  */
-export default function ClientLayout(): React.JSX.Element {
+export default function ClientLayout(): React.JSX.Element | null {
   const user = useAuthStore((state) => state.user);
+  const consent = useConsent();
   const insets = useSafeAreaInsets();
 
   if (!user) {
     return <Redirect href="/(auth)/login" />;
+  }
+  if (consent.loading) {
+    return null;
+  }
+  if (consent.needsConsent) {
+    return <Redirect href="/privacy-consent" />;
   }
   if (user.role !== 'client') {
     return <Redirect href="/(app)/(tabs)/dashboard" />;
@@ -52,6 +59,7 @@ export default function ClientLayout(): React.JSX.Element {
         options={{ title: 'Inicio', tabBarIcon: tabIcon('home', 'home-outline') }}
       />
       <Tabs.Screen name="messages" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen
         name="nutrition"
         options={{ title: 'Alimentación', tabBarIcon: tabIcon('nutrition', 'nutrition-outline') }}

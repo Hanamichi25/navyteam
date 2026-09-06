@@ -6,7 +6,7 @@ import { FeedbackState } from '@/components/FeedbackState';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   NutritionPlanForm,
-  useNutritionPlans,
+  useNutritionPlan,
   useRemoveNutritionPlan,
   useUpdateNutritionPlan,
 } from '@/features/nutrition';
@@ -16,11 +16,9 @@ import type { NutritionPlanInput } from '@/types/nutrition';
 export default function EditNutritionPlanScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const plans = useNutritionPlans();
+  const plan = useNutritionPlan(id);
   const updatePlan = useUpdateNutritionPlan();
   const removePlan = useRemoveNutritionPlan();
-
-  const plan = plans.status === 'ready' ? plans.data.find((p) => p.id === id) : null;
 
   const handleSubmit = async (input: NutritionPlanInput) => {
     await updatePlan.mutateAsync({ id, input });
@@ -46,13 +44,13 @@ export default function EditNutritionPlanScreen(): React.JSX.Element {
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
       <ScreenHeader title="Editar Plan" centered onBack={() => router.back()} />
 
-      {plans.status === 'loading' ? (
+      {plan.status === 'loading' ? (
         <FeedbackState variant="loading" />
-      ) : !plan ? (
-        <FeedbackState variant="error" message="No se encontró el plan." />
+      ) : plan.status === 'error' ? (
+        <FeedbackState variant="error" message={plan.error} />
       ) : (
         <NutritionPlanForm
-          initialValues={plan}
+          initialValues={plan.data}
           submitLabel="Guardar cambios"
           isSubmitting={updatePlan.isPending}
           onSubmit={handleSubmit}

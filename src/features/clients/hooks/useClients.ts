@@ -3,12 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useClientsGateway } from '@/gateways';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { BodyMeasurement, Client, ClientDetail, ClientInput } from '@/types/client';
-import type { PaymentInput } from '../gateway';
+import type { ClientAccess, PaymentInput } from '../gateway';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
 
 const clientsKey = ['clients'] as const;
 const clientKey = (id: string) => ['clients', id] as const;
+const clientAccessKey = (id: string) => ['clients', id, 'access'] as const;
 
 /** Carga la lista de clientes del entrenador. */
 export function useClients(): AsyncState<Client[]> {
@@ -58,7 +59,7 @@ export function useUpdateClient() {
   });
 }
 
-/** Elimina un cliente e invalida la lista. */
+/** Elimina un cliente (y su cuenta de acceso + todos sus datos) e invalida la lista. */
 export function useRemoveClient() {
   const gateway = useClientsGateway();
   const queryClient = useQueryClient();
@@ -66,6 +67,31 @@ export function useRemoveClient() {
     mutationFn: (id: string) => gateway.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientsKey });
+    },
+  });
+}
+
+/** Estado del alta por invitación de un cliente (`none` | `invited` | `active`). */
+export function useClientAccess(clientId: string): AsyncState<ClientAccess> {
+  const gateway = useClientsGateway();
+  return toAsyncState(
+    useQuery({
+      queryKey: clientAccessKey(clientId),
+      queryFn: () => gateway.accessStatus(clientId),
+      enabled: clientId !== '',
+    }),
+    'No se pudo consultar el acceso del usuario',
+  );
+}
+
+/** Envía (o reenvía) la invitación por email a un cliente. */
+export function useInviteClient() {
+  const gateway = useClientsGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (clientId: string) => gateway.invite(clientId),
+    onSuccess: (_data, clientId) => {
+      queryClient.invalidateQueries({ queryKey: clientAccessKey(clientId) });
     },
   });
 }

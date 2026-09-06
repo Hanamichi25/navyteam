@@ -9,6 +9,7 @@ import { FeedbackState } from '@/components/FeedbackState';
 import { useAuthStore } from '@/features/auth';
 import { useClient } from '@/features/clients';
 import { CoachMessageCard } from '@/features/messages';
+import { NotificationBell } from '@/features/notifications';
 import {
   AssignedRoutineView,
   TodayRoutineCard,
@@ -48,6 +49,9 @@ export default function ClientHomeScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'left', 'right']}>
+      <View className="flex-row items-center justify-end px-5 pb-1 pt-2">
+        <NotificationBell onPress={() => router.push('/(client)/notifications')} />
+      </View>
       <DateStrip />
 
       {!clientId ? (

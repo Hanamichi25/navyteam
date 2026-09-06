@@ -98,6 +98,11 @@ export default function ClientAccountScreen(): React.JSX.Element {
 
         <View className="gap-3">
           <ListRow
+            label="Política de Tratamiento de Datos"
+            iconName="document-text-outline"
+            onPress={() => router.push('/privacy')}
+          />
+          <ListRow
             label="Cerrar Sesión"
             iconName="log-out-outline"
             destructive

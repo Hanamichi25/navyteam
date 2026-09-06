@@ -16,16 +16,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureAuthGateway, useAuthStore } from '@/features/auth';
-import { createMockAuthGateway } from '@/features/auth/mocks/authGateway.mock';
 import { createSupabaseAuthGateway } from '@/features/auth/supabase/authGateway.supabase';
+import { NotificationsBridge } from '@/features/notifications';
 import { GatewaysProvider } from '@/gateways';
 
 const queryClient = new QueryClient();
 
-// TODO(backend): quitar la rama mock cuando ya no haga falta desarrollar/testear sin credenciales.
-configureAuthGateway(
-  process.env.EXPO_PUBLIC_SUPABASE_URL ? createSupabaseAuthGateway() : createMockAuthGateway(),
-);
+// Toda la data va contra Supabase; `.env` es obligatorio (`src/lib/supabase.ts` lanza si falta).
+configureAuthGateway(createSupabaseAuthGateway());
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -59,11 +57,15 @@ export default function RootLayout(): React.JSX.Element | null {
         <QueryClientProvider client={queryClient}>
           <GatewaysProvider>
             <StatusBar style="dark" />
+            <NotificationsBridge />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />
               <Stack.Screen name="(client)" />
+              <Stack.Screen name="privacy" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="privacy-consent" />
+              <Stack.Screen name="set-password" />
             </Stack>
           </GatewaysProvider>
         </QueryClientProvider>

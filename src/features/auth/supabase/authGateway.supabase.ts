@@ -1,7 +1,15 @@
 import type { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
-import type { LoginCredentials, LoginResult, Session, User, UserRole } from '@/types/auth';
+import type {
+  Consent,
+  ConsentRecord,
+  LoginCredentials,
+  LoginResult,
+  Session,
+  User,
+  UserRole,
+} from '@/types/auth';
 import type { AuthGateway } from '../gateway';
 
 /**
@@ -80,6 +88,56 @@ export function createSupabaseAuthGateway(): AuthGateway {
       } catch {
         return null;
       }
+    },
+
+    async getConsent(): Promise<Consent | null> {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) return null;
+
+      const { data, error } = await supabase
+        .from('user_consents')
+        .select('policy_version, accepted_at')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error || !data) return null;
+      return { policyVersion: data.policy_version, acceptedAt: data.accepted_at };
+    },
+
+    async acceptConsent(policyVersion: string): Promise<void> {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error('No hay sesión para registrar el consentimiento.');
+
+      const { error } = await supabase
+        .from('user_consents')
+        .upsert(
+          { user_id: uid, policy_version: policyVersion, accepted_at: new Date().toISOString() },
+          { onConflict: 'user_id' },
+        );
+      if (error) throw new Error(error.message);
+    },
+
+    async getConsentReport(): Promise<ConsentRecord[]> {
+      const { data, error } = await supabase.rpc('consent_report');
+      if (error) throw new Error(error.message);
+      return (data ?? []).map(
+        (row: {
+          user_id: string;
+          email: string;
+          name: string;
+          role: string;
+          policy_version: string;
+          accepted_at: string;
+        }) => ({
+          userId: row.user_id,
+          email: row.email,
+          name: row.name,
+          role: row.role,
+          policyVersion: row.policy_version,
+          acceptedAt: row.accepted_at,
+        }),
+      );
     },
   };
 }

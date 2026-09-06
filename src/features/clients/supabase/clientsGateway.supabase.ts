@@ -21,7 +21,21 @@ import type {
 } from '@/types/client';
 import type { NutritionPlan } from '@/types/nutrition';
 import type { Routine } from '@/types/routine';
-import type { ClientsGateway, PaymentInput } from '../gateway';
+import type { ClientAccess, ClientsGateway, PaymentInput } from '../gateway';
+
+/** Extrae el mensaje de error del cuerpo JSON de una Edge Function (`{ error }`). */
+async function functionErrorMessage(error: unknown, fallback: string): Promise<string> {
+  try {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = (await ctx.json()) as { error?: string };
+      if (body?.error) return body.error;
+    }
+  } catch {
+    /* cuerpo no-JSON */
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 /**
  * Implementación real de `ClientsGateway` sobre Supabase.
@@ -62,6 +76,34 @@ interface AssignedRoutineRow {
   } | null;
 }
 
+interface PlanItemFoodEmbed {
+  ref_quantity: number;
+  kcal: number;
+}
+
+interface AssignedPlanRow {
+  id: string;
+  name: string;
+  target_kcal_per_day: number | null;
+  nutrition_meals: {
+    nutrition_meal_items: { quantity: number; foods: PlanItemFoodEmbed | null }[];
+  }[];
+}
+
+/**
+ * kcal/día del plan asignado: suma de sus comidas (redondeo por item, igual que
+ * `nutritionMath.itemTotals`) o, si el plan no tiene alimentos, su objetivo.
+ */
+function assignedPlanKcalPerDay(plan: AssignedPlanRow): number {
+  const items = (plan.nutrition_meals ?? []).flatMap((meal) => meal.nutrition_meal_items ?? []);
+  if (items.length === 0) return plan.target_kcal_per_day ?? 0;
+  return items.reduce((sum, item) => {
+    const food = item.foods;
+    if (!food || food.ref_quantity <= 0) return sum;
+    return sum + Math.round((food.kcal * item.quantity) / food.ref_quantity);
+  }, 0);
+}
+
 interface ClientRow {
   id: string;
   name: string;
@@ -80,7 +122,7 @@ interface ClientRow {
   body_measurements: MeasurementRow[];
   payments: PaymentRow[];
   client_routines: AssignedRoutineRow[];
-  nutrition_plans: { id: string; name: string; kcal_per_day: number } | null;
+  nutrition_plans: AssignedPlanRow | null;
   workout_sessions: { date: string }[];
   messages: { sent_at: string }[];
 }
@@ -91,7 +133,10 @@ const DETAIL_COLUMNS = `
   body_measurements(id, date, weight_kg, waist_cm, chest_cm, hip_cm, arm_cm),
   payments(id, date, amount_eur, months, covers_until),
   client_routines(id, schedule, routines(id, name, duration_min, routine_blocks(count))),
-  nutrition_plans(id, name, kcal_per_day),
+  nutrition_plans(
+    id, name, target_kcal_per_day,
+    nutrition_meals(nutrition_meal_items(quantity, foods(ref_quantity, kcal)))
+  ),
   workout_sessions(date),
   messages(sent_at)
 `;
@@ -197,7 +242,7 @@ function rowToClientDetail(row: ClientRow): ClientDetail {
       ? {
           id: row.nutrition_plans.id,
           name: row.nutrition_plans.name,
-          kcalPerDay: row.nutrition_plans.kcal_per_day,
+          kcalPerDay: assignedPlanKcalPerDay(row.nutrition_plans),
         }
       : null,
     monthlyFeeEur: row.monthly_fee_eur,
@@ -272,8 +317,14 @@ export function createSupabaseClientsGateway(): ClientsGateway {
     },
 
     async remove(id) {
-      const { error } = await supabase.from('clients').delete().eq('id', id);
-      if (error) throw new Error(error.message);
+      // Borra la ficha (cascada) + el usuario de Auth vinculado, en servidor.
+      const { data, error } = await supabase.functions.invoke('delete-client', {
+        body: { clientId: id },
+      });
+      if (error) throw new Error(await functionErrorMessage(error, 'No se pudo eliminar el usuario.'));
+      if (data && (data as { error?: string }).error) {
+        throw new Error((data as { error: string }).error);
+      }
     },
 
     async assignRoutine(clientId: string, routine: Routine, schedule: string) {
@@ -365,6 +416,24 @@ export function createSupabaseClientsGateway(): ClientsGateway {
       if (bump.error) throw new Error(bump.error.message);
 
       return fetchDetail(clientId);
+    },
+
+    async invite(clientId: string) {
+      const { data, error } = await supabase.functions.invoke('invite-client', {
+        body: { clientId },
+      });
+      if (error) {
+        throw new Error(await functionErrorMessage(error, 'No se pudo enviar la invitación.'));
+      }
+      if (data && (data as { error?: string }).error) {
+        throw new Error((data as { error: string }).error);
+      }
+    },
+
+    async accessStatus(clientId: string): Promise<ClientAccess> {
+      const { data, error } = await supabase.rpc('client_access_status', { cid: clientId });
+      if (error) throw new Error(error.message);
+      return (data as ClientAccess) ?? 'none';
     },
   };
 }

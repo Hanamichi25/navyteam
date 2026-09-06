@@ -2,44 +2,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 
 import { Badge } from '@/components/Badge';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { MacroBar } from '@/components/MacroBar';
+import { FOOD_UNIT_SUFFIX } from '@/features/foods';
 import { COLORS } from '@/lib/colors';
-import type { NutritionPlan } from '@/types/nutrition';
+import type { NutritionPlanDetail as NutritionPlanDetailType } from '@/types/nutrition';
 
 import { NUTRITION_CATEGORY_LABEL, NUTRITION_CATEGORY_TONE } from '../labels';
 
 interface NutritionPlanDetailProps {
-  plan: NutritionPlan;
+  plan: NutritionPlanDetailType;
 }
 
-/** Gramos de un macro a partir de las kcal diarias y su porcentaje. */
-function macroGrams(kcalPerDay: number, pct: number, kcalPerGram: number): number {
-  return Math.round((kcalPerDay * pct) / 100 / kcalPerGram);
+function quantityLabel(quantity: number, unit: string): string {
+  return `${quantity} ${FOOD_UNIT_SUFFIX[unit as keyof typeof FOOD_UNIT_SUFFIX] ?? unit}`;
 }
 
-function MacroTile({
-  grams,
-  label,
-  pct,
-}: {
-  grams: number;
-  label: string;
-  pct: number;
-}): React.JSX.Element {
-  return (
-    <View className="flex-1 items-center rounded-2xl border border-line bg-surface-subtle px-2 py-3">
-      <Text className="text-lg font-extrabold text-ink">{grams} g</Text>
-      <Text className="mt-0.5 text-xs text-ink-muted">{label}</Text>
-      <Text className="text-xs text-ink-faint">{pct}%</Text>
-    </View>
-  );
-}
-
-/** Vista de solo lectura de un plan de alimentación (objetivo + macros + notas). */
-export function NutritionPlanDetail({
-  plan,
-}: NutritionPlanDetailProps): React.JSX.Element {
-  const { kcalPerDay, macros } = plan;
+/** Vista de solo lectura de un plan de alimentación: total + comidas + notas. */
+export function NutritionPlanDetail({ plan }: NutritionPlanDetailProps): React.JSX.Element {
+  const { totals, targetKcalPerDay, meals } = plan;
+  const diff = targetKcalPerDay !== null ? totals.kcal - targetKcalPerDay : null;
 
   return (
     <View className="gap-4">
@@ -55,35 +37,59 @@ export function NutritionPlanDetail({
         <View className="h-11 w-11 items-center justify-center rounded-full bg-surface">
           <Ionicons name="flame-outline" size={22} color={COLORS.primary} />
         </View>
-        <View>
+        <View className="flex-1">
           <Text className="text-2xl font-extrabold text-primary-dark">
-            {kcalPerDay.toLocaleString('es-ES')} kcal
+            {totals.kcal.toLocaleString('es-ES')} kcal
           </Text>
-          <Text className="text-sm text-ink-muted">objetivo diario</Text>
+          <Text className="text-sm text-ink-muted">
+            {meals.length > 0 ? 'total del plan' : 'objetivo diario'}
+            {targetKcalPerDay !== null && meals.length > 0
+              ? ` · objetivo ${targetKcalPerDay.toLocaleString('es-ES')}${
+                  diff !== null && diff !== 0 ? ` (${diff > 0 ? '+' : ''}${diff})` : ''
+                }`
+              : ''}
+          </Text>
         </View>
       </View>
 
       <View className="gap-2.5">
-        <Text className="text-sm font-bold text-ink">Reparto de macros</Text>
-        <View className="flex-row gap-2.5">
-          <MacroTile
-            grams={macroGrams(kcalPerDay, macros.proteinPct, 4)}
-            label="Proteína"
-            pct={macros.proteinPct}
-          />
-          <MacroTile
-            grams={macroGrams(kcalPerDay, macros.carbsPct, 4)}
-            label="Carbos"
-            pct={macros.carbsPct}
-          />
-          <MacroTile
-            grams={macroGrams(kcalPerDay, macros.fatPct, 9)}
-            label="Grasas"
-            pct={macros.fatPct}
-          />
+        <View className="flex-row justify-between">
+          <Text className="text-sm font-semibold text-ink">Proteína {totals.grams.proteinG} g</Text>
+          <Text className="text-sm font-semibold text-ink">Carbos {totals.grams.carbsG} g</Text>
+          <Text className="text-sm font-semibold text-ink">Grasas {totals.grams.fatG} g</Text>
         </View>
-        <MacroBar macros={macros} />
+        <MacroBar macros={totals.macros} />
       </View>
+
+      {meals.length > 0 ? (
+        <View className="gap-3">
+          <Text className="text-sm font-bold text-ink">Comidas</Text>
+          {meals.map((meal) => (
+            <CollapsibleSection
+              key={meal.id}
+              title={meal.name}
+              iconName="restaurant-outline"
+              summary={`${meal.kcal} kcal`}
+            >
+              <View className="gap-2">
+                {meal.items.map((item) => (
+                  <View
+                    key={item.id}
+                    className="flex-row items-center justify-between rounded-lg bg-surface-subtle px-3 py-2"
+                  >
+                    <Text className="flex-1 text-sm text-ink" numberOfLines={1}>
+                      {item.foodName}
+                    </Text>
+                    <Text className="text-xs text-ink-faint">
+                      {quantityLabel(item.quantity, item.unit)} · {item.kcal} kcal
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </CollapsibleSection>
+          ))}
+        </View>
+      ) : null}
 
       {plan.notes ? (
         <View className="gap-1.5 rounded-2xl border border-line bg-surface-subtle p-4">

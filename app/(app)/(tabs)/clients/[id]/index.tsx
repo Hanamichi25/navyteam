@@ -14,6 +14,7 @@ import { PeriodToggle } from '@/components/PeriodToggle';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   AssignedRoutineRow,
+  ClientAccessCard,
   CLIENT_GOAL_LABEL,
   CLIENT_GOAL_TONE,
   SUBSCRIPTION_STATUS_META,
@@ -141,6 +142,10 @@ export default function ClientProfileScreen(): React.JSX.Element {
                   router.push(`/(app)/(tabs)/clients/${id}/register-payment`)
                 }
               />
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Acceso a la app" iconName="key-outline">
+              <ClientAccessCard clientId={id} hasEmail={Boolean(client.data.email)} />
             </CollapsibleSection>
 
             <CollapsibleSection
