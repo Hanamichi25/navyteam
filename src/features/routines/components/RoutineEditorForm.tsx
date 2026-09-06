@@ -44,13 +44,16 @@ export function RoutineEditorForm({
     initialValues?.blocks?.[0]?.id ?? null,
   );
 
+  // `exercises.data` es referencia estable de React Query (el wrapper de
+  // `toAsyncState` no lo es), así que el `useMemo` no recomputa por render.
+  const exerciseList = exercises.status === 'ready' ? exercises.data : null;
   const exerciseById = useMemo(() => {
     const map = new Map<string, Exercise>();
-    if (exercises.status === 'ready') {
-      for (const exercise of exercises.data) map.set(exercise.id, exercise);
+    if (exerciseList) {
+      for (const exercise of exerciseList) map.set(exercise.id, exercise);
     }
     return map;
-  }, [exercises]);
+  }, [exerciseList]);
 
   const countByExerciseId = useMemo(() => {
     const map = new Map<string, number>();

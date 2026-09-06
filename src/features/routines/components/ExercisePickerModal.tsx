@@ -14,6 +14,9 @@ import {
   type MuscleGroupFilter,
 } from '@/features/exercises';
 import { COLORS } from '@/lib/colors';
+import type { Exercise } from '@/types/exercise';
+
+const NO_EXERCISES: readonly Exercise[] = [];
 
 interface ExercisePickerModalProps {
   visible: boolean;
@@ -39,10 +42,9 @@ export function ExercisePickerModal({
   const [query, setQuery] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroupFilter>('all');
 
-  const all = useMemo(
-    () => (exercises.status === 'ready' ? exercises.data : []),
-    [exercises],
-  );
+  // `exercises` (de `toAsyncState`) es un objeto nuevo por render; `exercises.data`
+  // sí es referencia estable de React Query.
+  const all = exercises.status === 'ready' ? exercises.data : NO_EXERCISES;
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());

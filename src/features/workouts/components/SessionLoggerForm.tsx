@@ -54,13 +54,19 @@ export function SessionLoggerForm({
   const routineEnabled = selectedRoutineId !== null;
   const routine = useRoutine(selectedRoutineId ?? '', routineEnabled);
 
+  // `toAsyncState` devuelve un objeto nuevo por render; nos quedamos con los
+  // datos crudos (que sí son referencia estable de React Query) para que los
+  // efectos de abajo no se re-ejecuten en bucle.
+  const exerciseList = exercises.status === 'ready' ? exercises.data : null;
+  const routineBlocks = routine.status === 'ready' ? routine.data.blocks : null;
+
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
-    if (exercises.status === 'ready') {
-      for (const exercise of exercises.data) map.set(exercise.id, exercise.name);
+    if (exerciseList) {
+      for (const exercise of exerciseList) map.set(exercise.id, exercise.name);
     }
     return map;
-  }, [exercises]);
+  }, [exerciseList]);
 
   const [date, setDate] = useState(todayDdMmAaaa());
   const [notes, setNotes] = useState('');
@@ -71,14 +77,16 @@ export function SessionLoggerForm({
   useEffect(() => {
     if (!routineEnabled) {
       seededFor.current = null;
-      setDrafts([]);
+      // `[]` nuevo cada vez → sin este guard el efecto se re-dispara en bucle
+      // (deps con `nameById`) cuando no hay rutina seleccionada.
+      setDrafts((prev) => (prev.length === 0 ? prev : []));
       return;
     }
-    if (routine.status !== 'ready' || exercises.status !== 'ready') return;
+    if (!routineBlocks || !exerciseList) return;
     if (seededFor.current === selectedRoutineId) return;
     seededFor.current = selectedRoutineId;
-    setDrafts(draftsFromBlocks(routine.data.blocks, nameById));
-  }, [routineEnabled, routine.status, exercises.status, selectedRoutineId, routine, nameById]);
+    setDrafts(draftsFromBlocks(routineBlocks, nameById));
+  }, [routineEnabled, routineBlocks, exerciseList, selectedRoutineId, nameById]);
 
   const patchSet = (blockId: string, key: string, patch: Partial<Omit<DraftSet, 'key'>>): void => {
     setDrafts((prev) =>

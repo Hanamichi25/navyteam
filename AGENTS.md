@@ -993,8 +993,13 @@ Antes de cerrar cualquier tarea de código: `npm run typecheck` en verde y, si t
 > `npx supabase functions deploy invite-client delete-client` ·
 > `npx supabase functions deploy send-push --no-verify-jwt` ·
 > `npx supabase secrets set INVITE_REDIRECT_URL=https://<host-web>/set-password` ·
-> `npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>` + fila `app_config` (ver Fase 15) ·
-> (opcional, limpieza) `supabase/cleanup_demo_activity.sql`.
+> `npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>` + fila `app_config` (ver Fase 15).
+>
+> **Antes de producción:** `supabase/cleanup_before_prod.sql` (borra los 5 clientes demo + su
+> actividad + el usuario `cliente@navyteam.com`; **conserva** el catálogo y la cuenta
+> `entrenador@navyteam.com`). Cambiar email/contraseña/nombre de esa cuenta desde el Dashboard →
+> Authentication → Users (así se mantiene `auth.identities` consistente). La contraseña
+> `navyteam123` está en este archivo → **hay que cambiarla**.
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
 2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
