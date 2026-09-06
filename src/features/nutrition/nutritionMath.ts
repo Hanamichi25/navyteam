@@ -110,6 +110,13 @@ export interface PlanMeta {
   assignedCount: number;
 }
 
+/** Suma en gramos de los items medidos en `g` o `ml` (las unidades no cuentan). */
+function weightGOf(items: readonly { quantity: number; unit: string }[]): number {
+  return round(
+    items.reduce((n, i) => n + (i.unit === 'g' || i.unit === 'ml' ? i.quantity : 0), 0),
+  );
+}
+
 function resolveMeal(raw: RawMeal, foodsById: Map<string, Food>): Meal {
   const items: MealItem[] = raw.items.map((item) => {
     const food = foodsById.get(item.foodId);
@@ -122,7 +129,23 @@ function resolveMeal(raw: RawMeal, foodsById: Map<string, Food>): Meal {
       kcal: food ? itemTotals(item.quantity, food).kcal : 0,
     };
   });
-  return { id: raw.id, name: raw.name, items, kcal: items.reduce((n, i) => n + i.kcal, 0) };
+  return {
+    id: raw.id,
+    name: raw.name,
+    items,
+    kcal: items.reduce((n, i) => n + i.kcal, 0),
+    weightG: weightGOf(items),
+  };
+}
+
+/** Peso en gramos de una lista de items del editor, contra el catálogo indexado. */
+export function itemsWeightG(
+  items: readonly MealItemInput[],
+  foodsById: Map<string, Food>,
+): number {
+  return weightGOf(
+    items.map((i) => ({ quantity: i.quantity, unit: foodsById.get(i.foodId)?.unit ?? 'g' })),
+  );
 }
 
 /** Ensambla el detalle completo del plan (comidas resueltas + totales calculados). */

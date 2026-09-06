@@ -630,8 +630,17 @@ del catálogo y cantidades, y las kcal/macros se **calculan** de ese contenido.
    `NutritionPlanDetail` rediseñado (total + comidas plegables con kcal por item + notas).
    `NutritionPlanCard` y la vista de cliente muestran el kcal calculado. `NumberField` gana
    `decimal` (macros con decimales) y `label` opcional. **`MealEditorCard` es colapsable**
-   (cabecera nº + nombre + resumen `N alimentos · kcal`; `expandedMealId` en el form, la comida
-   nueva se abre sola) — mismo patrón que `ExerciseBlockCard` del editor de rutinas.
+   (cabecera nº + nombre + resumen `peso g · N alim.` + `kcal`; `expandedMealId` en el form, la
+   comida nueva se abre sola) — mismo patrón que `ExerciseBlockCard` del editor de rutinas.
+   - **Catálogo de alimentos por macros (2026-09-06):** `FoodEditorForm` ya no pide las kcal —
+     solo proteína/carbos/grasas por porción; las kcal se **derivan** con
+     `kcalFromMacros` (`src/features/foods/macros.ts` — Atwater 4/4/9) al guardar y en un preview
+     en vivo. `foods.kcal` sigue siendo columna de BD (se escribe calculada; los alimentos ya
+     existentes conservan su valor hasta que se re-guardan). `foodSchema` pierde el campo `kcal`.
+   - **Peso de la comida en gramos (2026-09-06):** `Meal` gana `weightG` (suma de items en
+     `g`+`ml`; las unidades no cuentan), calculado en `nutritionMath.resolveMeal`; helper
+     `itemsWeightG` para el editor. Se muestra como métrica principal en `MealEditorCard` y en el
+     resumen de `NutritionPlanDetail` (cliente).
 7. **`clientsGateway.supabase.ts`**: el embed del plan asignado (`ClientDetail.assignedPlan`,
    también usado por la **lista** de clientes) dejó de pedir `kcal_per_day` (columna eliminada
    en `0004` → error `42703` al consultar usuarios). Ahora embebe

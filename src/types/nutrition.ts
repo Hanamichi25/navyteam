@@ -65,12 +65,14 @@ export interface MealItem {
   kcal: number;
 }
 
-/** Una comida del plan (desayuno, almuerzo, ...), con su total de kcal. */
+/** Una comida del plan (desayuno, almuerzo, ...), con su total de kcal y peso. */
 export interface Meal {
   id: string;
   name: string;
   items: MealItem[];
   kcal: number;
+  /** Peso total en gramos (suma de los items en `g` y `ml`; las unidades no cuentan). */
+  weightG: number;
 }
 
 // --- Plan -----------------------------------------------------------------

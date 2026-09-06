@@ -18,7 +18,7 @@ import {
   newMeal,
   type MealDraft,
 } from '../mealDraft';
-import { itemTotals, mealInputTotals } from '../nutritionMath';
+import { itemsWeightG, itemTotals, mealInputTotals } from '../nutritionMath';
 import { nutritionPlanSchema, type NutritionPlanFormValues } from '../validation';
 import { FoodPickerModal } from './FoodPickerModal';
 import { MealEditorCard } from './MealEditorCard';
@@ -88,6 +88,14 @@ export function NutritionPlanForm({
       const food = foodsById.get(i.foodId);
       return n + (food && i.quantity !== null ? itemTotals(i.quantity, food).kcal : 0);
     }, 0);
+
+  const mealWeightG = (meal: MealDraft): number =>
+    itemsWeightG(
+      meal.items
+        .filter((i) => i.quantity !== null)
+        .map((i) => ({ foodId: i.foodId, quantity: i.quantity as number })),
+      foodsById,
+    );
 
   const patchMeal = (id: string, fn: (m: MealDraft) => MealDraft): void =>
     setMeals((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
@@ -174,6 +182,7 @@ export function NutritionPlanForm({
               index={index}
               foodsById={foodsById}
               mealKcal={mealKcal(meal)}
+              mealWeightG={mealWeightG(meal)}
               expanded={expandedMealId === meal.id}
               onToggle={() =>
                 setExpandedMealId((current) => (current === meal.id ? null : meal.id))

@@ -9,6 +9,7 @@ import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import type { FoodInput, FoodUnit } from '@/types/food';
 import { FOOD_REF_QUANTITY, FOOD_UNIT_OPTIONS, refQuantityLabel } from '../labels';
+import { kcalFromMacros } from '../macros';
 import { foodSchema, type FoodFormValues } from '../validation';
 
 interface FoodEditorFormProps {
@@ -32,7 +33,6 @@ export function FoodEditorForm({
     defaultValues: {
       name: initialValues?.name ?? '',
       unit: initialValues?.unit ?? null,
-      kcal: initialValues?.kcal ?? null,
       proteinG: initialValues?.proteinG ?? null,
       carbsG: initialValues?.carbsG ?? null,
       fatG: initialValues?.fatG ?? null,
@@ -40,8 +40,12 @@ export function FoodEditorForm({
     mode: 'onTouched',
   });
 
-  const unit = useWatch({ control, name: 'unit' });
+  const [unit, proteinG, carbsG, fatG] = useWatch({
+    control,
+    name: ['unit', 'proteinG', 'carbsG', 'fatG'],
+  });
   const perLabel = unit ? refQuantityLabel(unit, FOOD_REF_QUANTITY[unit]) : 'por porción';
+  const kcalPreview = kcalFromMacros(proteinG ?? 0, carbsG ?? 0, fatG ?? 0);
 
   const submit = handleSubmit((values) => {
     const u = values.unit as FoodUnit;
@@ -49,7 +53,7 @@ export function FoodEditorForm({
       name: values.name.trim(),
       unit: u,
       refQuantity: FOOD_REF_QUANTITY[u],
-      kcal: values.kcal!,
+      kcal: kcalFromMacros(values.proteinG!, values.carbsG!, values.fatG!),
       proteinG: values.proteinG!,
       carbsG: values.carbsG!,
       fatG: values.fatG!,
@@ -93,24 +97,8 @@ export function FoodEditorForm({
         />
 
         <Text className="-mb-2 text-xs text-ink-faint">
-          Valores nutricionales {perLabel}:
+          Macronutrientes {perLabel}:
         </Text>
-
-        <Controller
-          control={control}
-          name="kcal"
-          render={({ field: { value, onChange, onBlur }, fieldState }) => (
-            <NumberField
-              label="Calorías"
-              suffix="kcal"
-              decimal
-              value={value}
-              onChange={onChange}
-              onBlur={onBlur}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
 
         <View className="flex-row gap-3">
           <View className="flex-1">
@@ -165,6 +153,16 @@ export function FoodEditorForm({
             />
           </View>
         </View>
+
+        <View className="flex-row items-center justify-between rounded-2xl bg-primary-light px-4 py-3">
+          <Text className="text-sm font-semibold text-ink">Calorías (calculadas)</Text>
+          <Text className="text-lg font-extrabold text-primary-dark">
+            {kcalPreview} kcal
+          </Text>
+        </View>
+        <Text className="-mt-3 text-xs text-ink-faint">
+          Se calculan de los macros (proteína y carbohidratos 4 kcal/g, grasa 9 kcal/g).
+        </Text>
       </ScrollView>
 
       <View className="gap-3 border-t border-line px-5 py-3">

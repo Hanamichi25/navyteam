@@ -7,7 +7,7 @@ export const foodSchema = z
   .object({
     name: z.string().min(1, 'Ingresa un nombre'),
     unit: z.enum(FOOD_UNITS).nullable(),
-    kcal: z.number().nullable(),
+    // Las kcal ya no se introducen: se derivan de los macros (ver `kcalFromMacros`).
     proteinG: z.number().nullable(),
     carbsG: z.number().nullable(),
     fatG: z.number().nullable(),
@@ -15,9 +15,6 @@ export const foodSchema = z
   .superRefine((values, ctx) => {
     if (values.unit === null) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['unit'], message: 'Elige una unidad' });
-    }
-    if (values.kcal === null || values.kcal < 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['kcal'], message: 'Ingresa las kcal' });
     }
     for (const field of ['proteinG', 'carbsG', 'fatG'] as const) {
       if (values[field] === null || values[field]! < 0) {

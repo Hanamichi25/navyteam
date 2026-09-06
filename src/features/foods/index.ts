@@ -14,3 +14,4 @@ export {
   FOOD_UNIT_SUFFIX,
   refQuantityLabel,
 } from './labels';
+export { kcalFromMacros } from './macros';

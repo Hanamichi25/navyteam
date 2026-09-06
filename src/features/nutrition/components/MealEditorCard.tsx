@@ -11,6 +11,8 @@ interface MealEditorCardProps {
   index: number;
   foodsById: Map<string, Food>;
   mealKcal: number;
+  /** Peso total en gramos (g + ml). */
+  mealWeightG: number;
   expanded: boolean;
   onToggle: () => void;
   onChangeName: (name: string) => void;
@@ -29,6 +31,7 @@ export function MealEditorCard({
   index,
   foodsById,
   mealKcal,
+  mealWeightG,
   expanded,
   onToggle,
   onChangeName,
@@ -38,6 +41,10 @@ export function MealEditorCard({
   onRemoveMeal,
 }: MealEditorCardProps): React.JSX.Element {
   const itemCount = meal.items.length;
+  const subtitle =
+    mealWeightG > 0
+      ? `${mealWeightG} g · ${itemCount} alim.`
+      : `${itemCount} ${itemCount === 1 ? 'alimento' : 'alimentos'}`;
 
   return (
     <View className="overflow-hidden rounded-2xl border border-line bg-surface">
@@ -61,9 +68,7 @@ export function MealEditorCard({
           >
             {meal.name.trim() || 'Comida sin nombre'}
           </Text>
-          <Text className="text-xs text-ink-faint">
-            {itemCount} {itemCount === 1 ? 'alimento' : 'alimentos'}
-          </Text>
+          <Text className="text-xs text-ink-faint">{subtitle}</Text>
         </View>
         {expanded ? null : (
           <Text className="text-xs font-semibold text-ink-muted">{mealKcal} kcal</Text>
@@ -125,7 +130,12 @@ export function MealEditorCard({
               <Ionicons name="add" size={16} color={COLORS.primary} />
               <Text className="text-sm font-semibold text-primary">Añadir alimento</Text>
             </Pressable>
-            <Text className="text-sm font-bold text-ink">{mealKcal} kcal</Text>
+            <View className="items-end">
+              <Text className="text-sm font-bold text-ink">
+                {mealWeightG > 0 ? `${mealWeightG} g` : `${meal.items.length} alim.`}
+              </Text>
+              <Text className="text-xs text-ink-faint">{mealKcal} kcal</Text>
+            </View>
           </View>
 
           <Pressable

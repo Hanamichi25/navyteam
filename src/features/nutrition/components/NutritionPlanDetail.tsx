@@ -69,7 +69,9 @@ export function NutritionPlanDetail({ plan }: NutritionPlanDetailProps): React.J
               key={meal.id}
               title={meal.name}
               iconName="restaurant-outline"
-              summary={`${meal.kcal} kcal`}
+              summary={
+                meal.weightG > 0 ? `${meal.weightG} g · ${meal.kcal} kcal` : `${meal.kcal} kcal`
+              }
             >
               <View className="gap-2">
                 {meal.items.map((item) => (
