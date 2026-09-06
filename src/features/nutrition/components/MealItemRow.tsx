@@ -25,7 +25,7 @@ export function MealItemRow({
     food && item.quantity !== null ? itemTotals(item.quantity, food).kcal : 0;
 
   return (
-    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface-subtle p-3">
+    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3">
       <View className="flex-1 gap-0.5">
         <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
           {food?.name ?? 'Alimento no encontrado'}

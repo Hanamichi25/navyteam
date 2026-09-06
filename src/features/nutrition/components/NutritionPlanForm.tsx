@@ -45,12 +45,18 @@ export function NutritionPlanForm({
     initialValues ? draftsFromMeals(initialValues.meals) : [],
   );
   const [pickerForMeal, setPickerForMeal] = useState<string | null>(null);
+  const [expandedMealId, setExpandedMealId] = useState<string | null>(
+    initialValues?.meals?.[0]?.id ?? null,
+  );
 
+  // `foods.data` es referencia estable de React Query (el wrapper de
+  // `toAsyncState` no lo es), así que el `useMemo` no recomputa por render.
+  const foodList = foods.status === 'ready' ? foods.data : null;
   const foodsById = useMemo(() => {
     const map = new Map<string, Food>();
-    if (foods.status === 'ready') for (const f of foods.data) map.set(f.id, f);
+    if (foodList) for (const f of foodList) map.set(f.id, f);
     return map;
-  }, [foods]);
+  }, [foodList]);
 
   const { control, handleSubmit, watch } = useForm<NutritionPlanFormValues>({
     resolver: zodResolver(nutritionPlanSchema),
@@ -85,6 +91,12 @@ export function NutritionPlanForm({
 
   const patchMeal = (id: string, fn: (m: MealDraft) => MealDraft): void =>
     setMeals((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
+
+  const addMeal = (): void => {
+    const meal = newMeal();
+    setMeals((prev) => [...prev, meal]);
+    setExpandedMealId(meal.id);
+  };
 
   const submit = handleSubmit((values) => {
     onSubmit({
@@ -151,14 +163,21 @@ export function NutritionPlanForm({
         <PlanTotalsCard totals={totals} target={target} />
 
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-ink">Comidas</Text>
+          <Text className="text-sm font-semibold text-ink">
+            Comidas{meals.length > 0 ? ` · ${meals.length}` : ''}
+          </Text>
 
-          {meals.map((meal) => (
+          {meals.map((meal, index) => (
             <MealEditorCard
               key={meal.id}
               meal={meal}
+              index={index}
               foodsById={foodsById}
               mealKcal={mealKcal(meal)}
+              expanded={expandedMealId === meal.id}
+              onToggle={() =>
+                setExpandedMealId((current) => (current === meal.id ? null : meal.id))
+              }
               onChangeName={(name) => patchMeal(meal.id, (m) => ({ ...m, name }))}
               onAddFood={() => setPickerForMeal(meal.id)}
               onChangeItemQuantity={(itemId, quantity) =>
@@ -179,13 +198,13 @@ export function NutritionPlanForm({
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => setMeals((prev) => [...prev, newMeal()])}
+            onPress={addMeal}
             className="flex-row items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 active:bg-surface-subtle"
           >
             <Text className="text-sm font-semibold text-primary">＋ Añadir comida</Text>
           </Pressable>
 
-          {foods.status === 'ready' && foods.data.length === 0 ? (
+          {foodList && foodList.length === 0 ? (
             <Text className="text-xs text-ink-faint">
               El catálogo de alimentos está vacío. Créalos en el menú "Alimentos".
             </Text>
