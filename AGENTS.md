@@ -784,6 +784,87 @@ con estados avanzados.
 
 ---
 
+## Fase 16 — Endurecimiento de rendimiento y abuso — PENDIENTE (no empezada)
+
+Tres frentes pedidos por el usuario (2026-09-06) para que el servicio aguante uso real y no se
+lo pueda tumbar con tráfico. Ninguno cambia las interfaces `Gateway` ni la UI — son config de
+React Query, una capa en las Edge Functions y una migración de índices.
+
+### 16.1 — Cache en los servicios (menos consultas a la BD)
+
+Hoy `app/_layout.tsx` crea `new QueryClient()` **sin opciones** → `staleTime: 0`: cada montaje
+de pantalla o `refetchOnWindowFocus` dispara una consulta nueva. Con Supabase real eso es una
+request de red + una evaluación de RLS por cada vuelta.
+
+- **`QueryClient` con defaults sensatos** (`defaultOptions.queries`): `staleTime` de 30–60 s
+  para todo (los datos de este dominio no cambian cada segundo), `gcTime` ~5 min,
+  `refetchOnWindowFocus: false` en web (el pull-to-refresh y las invalidaciones tras mutación
+  ya cubren la frescura), `retry: 1`.
+- **`staleTime` por tipo de query** donde tenga sentido: catálogos (`exercises`, `foods`,
+  `routines`, `nutrition-plans`) toleran minutos; el dashboard y las notificaciones, menos.
+  Centralizarlo en un mapa por `queryKey[0]` o sobreescribir solo los hooks que lo necesiten.
+- **Revisar los `invalidateQueries` existentes**: al subir `staleTime`, cualquier mutación que
+  hoy dependa del refetch automático post-focus tiene que invalidar explícitamente su
+  `queryKey` (la mayoría ya lo hace — patrón de la Fase 3).
+- **Realtime como invalidador puntual** (ya hay precedente en `NotificationsBridge`): en vez de
+  bajar `staleTime`, suscribirse a los `postgres_changes` de una tabla e invalidar su
+  `queryKey` al llegar un cambio. Frescura sin polling. Candidatos: `messages`,
+  `workout_sessions` en el panel del coach.
+- **Persistir la cache entre recargas (web)** — opcional, más adelante:
+  `@tanstack/query-async-storage-persister` + `persistQueryClient`. Ojo: la sesión vive en
+  `sessionStorage` (Fase 9); persistir datos en `localStorage` mezclaría vidas distintas.
+
+**Qué NO hacer:** cache del lado del servidor (Redis, vistas materializadas) — es prematuro; el
+cuello hoy es el refetch agresivo del cliente, no la BD.
+
+### 16.2 — Rate limiting (que no nos tumben el servicio)
+
+- **PostgREST (los `*Gateway.supabase.ts`)**: el rate limiting real vive en el **proyecto de
+  Supabase**, no en el código. Dashboard:
+  - Auth → Rate Limits: bajar los de `/token`, `/signup`, `/recover`, `/otp`. El de `/token`
+    (login) es el más importante — hoy `LoginForm` no tiene back-off ni captcha.
+  - Auth → Settings: activar **Captcha** (hCaptcha/Turnstile) para `signup` / `signin`;
+    `LoginForm` renderiza el widget y pasa el token.
+  - Considerar poner Supabase detrás de **Cloudflare** (proxy) para rate limiting de borde por
+    IP y protección L7 — la defensa más efectiva contra un flood y no toca código.
+- **Edge Functions** (`invite-client`, `delete-client`, `send-push`): no tienen throttle propio.
+  - `invite-client` / `delete-client` ya validan que el llamador sea el coach dueño, pero un
+    coach comprometido podría invitar en bucle. Añadir un límite simple: tabla
+    `rate_limit (key, window_start, count)` + check atómico al entrar (`insert ... on conflict`),
+    `key = 'invite:' || caller_uid`, ventana de 1 min. Alternativa gestionada: **Upstash Redis**
+    (`@upstash/ratelimit`, SDK para Deno) — suma dependencia externa, confirmar antes.
+  - `send-push` ya está protegida por `x-push-secret`; el riesgo ahí es interno (trigger en
+    bucle), no público.
+- **App**: `LoginForm` con back-off local tras N intentos fallidos (UX, no seguridad — el
+  servidor es la autoridad) + botón deshabilitado mientras hay request en vuelo (ya lo hace).
+
+### 16.3 — Validar que las tablas estén indexadas
+
+**Estado actual** (revisado 2026-09-06): el esquema base (`0001`) y las migraciones nuevas ya
+traen índice en **casi todas** las FK y en las columnas de filtro frecuentes
+(`*_coach_id_idx`, `*_client_id_idx`, `workout_sessions (client_id, date desc)`,
+`messages (client_id, sent_at)`, `notifications (user_id, created_at desc)`, etc.).
+
+**Huecos detectados** (candidatos para `supabase/migrations/0007_phase16_indexes.sql`):
+- `workout_exercise_logs.exercise_id` — FK **sin índice**. Lo usa el progreso por ejercicio
+  (`clients/[id]/progress/[exerciseId]`) y el gateway de workouts al agregar por ejercicio.
+- `clients.nutrition_plan_id` — FK sin índice; lo usa el embed del plan asignado (lista +
+  perfil de cliente).
+- `workout_sessions.routine_id` — FK sin índice (menos crítico).
+- `user_consents` — solo PK; revisar el `EXPLAIN` de la RPC `consent_report()`.
+- **Índices que sostienen la RLS**: los helpers `is_coach_of` / `is_client_of` (`0002`) hacen
+  subqueries sobre `clients` — cubiertas por `clients_coach_id_idx` / `clients_client_user_id_idx`.
+  Verificar con `EXPLAIN (ANALYZE)` una query real de cada rol que la RLS no fuerce un seq scan.
+- **Barrido sistemático**: Supabase Dashboard → Advisors → "Performance" marca índices
+  faltantes automáticamente — usarlo primero. Luego correr las consultas más pesadas
+  (dashboard, lista de clientes con embeds, historial de sesiones) con un dataset de ~50
+  clientes × ~100 sesiones y mirar el plan.
+
+**Entregable:** `0007_phase16_indexes.sql` con `create index concurrently` **solo** de lo que el
+análisis confirme — un índice de más también cuesta en escritura.
+
+---
+
 ## Decisión de backend (TOMADA — Supabase)
 
 Confirmado por el usuario el 2026-09-04. Razones: Postgres + Auth + Storage + RLS + Realtime;
@@ -947,6 +1028,9 @@ interfaz, **nunca** con `@supabase/supabase-js` directamente.
 - Operaciones que necesitan `service_role` (crear/borrar usuarios de Auth) van en Edge
   Functions (`supabase/functions/`), nunca en la app.
 - Data de demo: `supabase/seed.sql` (fuente única). Migraciones: `supabase/migrations/`.
+- **Cache / rate limiting / índices:** ver **Fase 16** (pendiente). Hoy `QueryClient` no tiene
+  `staleTime` → cada pantalla refetchea; la Fase 16 lo ajusta, revisa índices faltantes y añade
+  rate limiting en Auth + Edge Functions.
 
 ---
 
@@ -1068,9 +1152,16 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
     `send-push` desplegada; `eas.json` + `expo-dev-client` listos. Pendiente: `PUSH_HOOK_SECRET` +
     `app_config` + FCM + `eas build` + probar el banner OS en un Android. Incluye el rework de
     "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
-15. **Fase 14** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
+15. **Fase 16** — **Endurecimiento de rendimiento y abuso**: (a) cache en React Query
+    (`QueryClient` con `staleTime`/`gcTime`, `refetchOnWindowFocus: false`, Realtime como
+    invalidador); (b) rate limiting (Auth Rate Limits + Captcha en el Dashboard, límite propio en
+    las Edge Functions, back-off en `LoginForm`, evaluar Cloudflare delante); (c) auditoría de
+    índices (`0007_phase16_indexes.sql` — huecos ya detectados:
+    `workout_exercise_logs.exercise_id`, `clients.nutrition_plan_id`, `workout_sessions.routine_id`;
+    + barrido con el Advisor de Supabase). Ver la sección "Fase 16". PENDIENTE.
+16. **Fase 14** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
-16. **Asistente de IA para rutinas y planes** (idea de producto — *plus* de pago) — el entrenador
+17. **Asistente de IA para rutinas y planes** (idea de producto — *plus* de pago) — el entrenador
     describe los requerimientos de cada cliente (objetivo, nivel, edad/medidas) + sus
     **limitaciones alimentarias** (alergias, intolerancias, vegetariano/vegano, religión,
     presupuesto) + **limitaciones físicas** (lesiones, movilidad, condiciones médicas, equipo
@@ -1082,7 +1173,7 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
     `NutritionPlanInput` estructurado; el entrenador siempre valida (calidad + responsabilidad);
     disclaimer médico/legal (no sustituye criterio profesional, sobre todo con condiciones
     médicas); coste por generación → límite por plan o feature de pago.
-17. **Futuro** — Integración WhatsApp; banner OS del push (FCM + `eas build`); recordatorios
+18. **Futuro** — Integración WhatsApp; banner OS del push (FCM + `eas build`); recordatorios
     programados (`pg_cron`); monorepo + extracción de módulos; offline-first; builds para tiendas.
 
 ✅ **Rediseño del editor de rutinas** (post-Fase 13) — cabecera con cifras en vivo, bloques de
