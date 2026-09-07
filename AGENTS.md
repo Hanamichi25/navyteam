@@ -28,11 +28,32 @@ Documentos de referencia (leer antes de generar código si aplica a la tarea):
 `*.mock.ts` de datos semilla **se borraron**; `src/gateways/index.tsx` y `app/_layout.tsx`
 inyectan siempre la implementación Supabase. `.env` (`EXPO_PUBLIC_SUPABASE_URL` +
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`) es **obligatorio** — `src/lib/supabase.ts` lanza si falta.
-`supabase/seed.sql` es la única fuente de la data de demo.
 
-Migraciones: `0001` … `0005` en `supabase/migrations/`. Aplicar con `npx supabase db push`.
-Edge Functions (`invite-client`, `delete-client`) deben estar desplegadas para que funcionen
-el alta y el borrado de clientes.
+**Sin datos de demo — solo clientes reales.** El seed (`supabase/seed.sql`) siembra únicamente
+los **catálogos del coach** (11 ejercicios, 6 rutinas, 4 planes, 24 alimentos). **No** se
+siembran clientes: los da de alta el entrenador desde la app, y cada uno recibe un email de
+invitación para crear su contraseña (Fase 11). `supabase/seed.sql` conserva bloques de clientes
+demo comentados/históricos, pero **no se ejecutan** — si aparece uno, es error.
+
+### Estado del proyecto Supabase real (`oqgknkxnmhzmxlntckck`) — verificado 2026-09-07
+
+- **Migraciones `0001`–`0006`: TODAS aplicadas** (`npx supabase migration list` → Local = Remote).
+- **Edge Functions `invite-client` / `delete-client` / `send-push`: desplegadas y ACTIVE.**
+- **Secrets configurados:** `PUSH_HOOK_SECRET`, y las que inyecta la plataforma
+  (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, …). Fila `app_config` (`edge_url`, `push_secret`)
+  **presente** → el push se dispara desde los triggers.
+- **Catálogos sembrados** (ejercicios 11, rutinas 6, planes 4, foods 24). **0 clientes** (correcto).
+- **Usuarios de Auth:** solo `entrenador@navyteam.com` (`role: coach`). No hay usuario cliente de
+  prueba y no debe crearse uno — los clientes entran por el flujo de invitación.
+
+**Lo que falta para el flujo de invitación (Fase 11):**
+1. **`INVITE_REDIRECT_URL`** (secret) — no está configurado. Debe ser `https://<host-web>/set-password`
+   (el deploy de EAS Hosting). `npx supabase secrets set INVITE_REDIRECT_URL=https://<host>/set-password`.
+2. **Allowlist de redirect**: Dashboard → Auth → URL Configuration → añadir
+   `https://<host>/set-password` y `https://<host>/**`.
+3. **Email template** "Invite user" → copy en español (opcional).
+4. Verificar que `PUSH_HOOK_SECRET` (secret de la función) == `app_config.push_secret` (no se pudo
+   comparar, ambos llegan como digest) — solo relevante al probar el push real.
 
 El histórico por fases de abajo conserva su redacción original ("con mocks", "AsyncStorage",
 etc.) como registro de cómo se construyó cada cosa; la implementación viva es la de Supabase.
@@ -516,13 +537,12 @@ referencia (offline / tests), igual que `authGateway.mock.ts`.
    `recentActivity` (sesiones + mediciones + mensajes). `upcomingSessions` = `[]` — no hay modelo
    de agenda de sesiones (hueco conocido).
 
-**Estado en el proyecto real (`oqgknkxnmhzmxlntckck`):** `0001` + `seed.sql` + `0002` aplicados.
-Usuarios: `entrenador@navyteam.com` / `navyteam123` (`role: coach`, name "Yonathan") y
-`cliente@navyteam.com` / `cliente123` (`role: client`, `client_id: cli_luis`, enlazado a la
-ficha vía `clients.client_user_id`). Para un `client` nuevo: crear el usuario con
-`user_metadata { "role": "client", "name": "...", "avatar_url": "...", "client_id": "<id de la ficha>" }`
-y setear `clients.client_user_id` con su UUID (el coach lo puede hacer desde la app en la Fase de
-alta self-service; por ahora, a mano).
+**Estado en el proyecto real (`oqgknkxnmhzmxlntckck`)** — ver "Estado del proyecto Supabase
+real" al principio del archivo para el detalle vivo. Resumen: `0001`–`0006` aplicadas, catálogos
+sembrados (`seed.sql` **solo** su parte de catálogos), **0 clientes** (correcto — no hay data de
+demo), único usuario `entrenador@navyteam.com` (`role: coach`, name "Yonathan"). Un `client`
+entra por el flujo de invitación de la Fase 11 (el coach lo da de alta desde la app → email →
+`/set-password`), lo que setea `clients.client_user_id` automáticamente.
 
 **Cómo aplicar las migraciones a otro entorno:** `npx supabase link --project-ref <ref>` +
 `npx supabase db push`; el seed (`seed.sql`) se pega en el SQL Editor (el `db reset` local sí lo
@@ -537,7 +557,7 @@ refetch cubre el cross-device).
 
 ---
 
-## Fase 11 — Alta de clientes por invitación + política de datos + borrado en cascada — CÓDIGO COMPLETO (pendiente aplicar/deploy + verificar)
+## Fase 11 — Alta de clientes por invitación + política de datos + borrado en cascada — INFRA LISTA (falta `INVITE_REDIRECT_URL` + verificar el flujo del enlace)
 
 Tres requisitos de producto juntos: el entrenador da de alta al cliente y este recibe un email
 para crear su contraseña; política de tratamiento de datos con aceptación obligatoria; y que al
@@ -577,16 +597,15 @@ eliminar un cliente se borre **toda** su data y su cuenta de Auth.
    (`src/lib/{csv,download}.ts`; en web descarga, en nativo comparte).
 6. `profile.tsx` del coach: `Alert.alert` → `confirm()` (bug de web) + fila a la política.
 
-**Pasos para activarlo:**
+**Estado de activación (2026-09-07):** `0003` aplicado. `invite-client` + `delete-client`
+desplegadas y ACTIVE. **Falta:**
 ```
-npx supabase db push                                  # aplica 0003
-npx supabase functions deploy invite-client delete-client
 npx supabase secrets set INVITE_REDIRECT_URL=https://<web-host>/set-password
 ```
-Dashboard → Auth → URL Configuration: añadir `https://<web-host>/set-password` (y
-`https://<web-host>/**`) a la allowlist de redirects. Auth → Email Templates → "Invite user":
-personalizar copy en español. Rellenar `src/features/auth/responsable.ts` y hacer revisar
-`policy.ts` por un abogado.
++ Dashboard → Auth → URL Configuration: añadir `https://<web-host>/set-password` y
+`https://<web-host>/**` a la allowlist. Auth → Email Templates → "Invite user": copy en español.
+Rellenar `src/features/auth/responsable.ts` y hacer revisar `policy.ts` por un abogado.
+El `<web-host>` sale del deploy de EAS Hosting (`npx eas deploy` / dashboard de hosting).
 
 **Pendiente de verificar:** flujo completo del enlace de invitación (`set-password` usa
 `setSession`/`exchangeCodeForSession` según el formato del enlace — puede necesitar ajuste
@@ -599,7 +618,7 @@ rediseño visual del editor de rutinas también está hecho (ver secciones más 
 
 ---
 
-## Fase 12 — Comidas y alimentos en los planes de alimentación — CÓDIGO COMPLETO (pendiente aplicar `0004` + verificar)
+## Fase 12 — Comidas y alimentos en los planes de alimentación — INFRA LISTA (`0004` aplicado; falta verificación end-to-end)
 
 Un plan de alimentación deja de ser "solo objetivo": se arma por **comidas** con **alimentos**
 del catálogo y cantidades, y las kcal/macros se **calculan** de ese contenido.
@@ -648,18 +667,17 @@ del catálogo y cantidades, y las kcal/macros se **calculan** de ese contenido.
    `kcalPerDay` con la misma regla que `buildPlanDetail` (suma de comidas, o el objetivo si el
    plan no tiene alimentos).
 
-**Para activarlo:** `npx supabase db push` (aplica `0004`) + re-pegar `supabase/seed.sql` en
-el SQL Editor (o solo la sección de `foods`/comidas si ya hay datos).
+**Estado (2026-09-07):** `0004` aplicado; 24 alimentos + planes con comidas sembrados (`seed.sql`).
 
 **Pendiente de verificar:** flujo completo en la app (crear plan con comidas → total en vivo →
-guardar → reabrir → vista de cliente); y el mismo contra Supabase tras aplicar `0004`.
+guardar → reabrir → vista de cliente).
 
 **Fuera de alcance:** que el cliente registre lo que comió / adherencia; variación por día de
 la semana; import de bases de datos externas de alimentos.
 
 ---
 
-## Fase 13 — Ocultar entradas del panel (feed + logros) — CÓDIGO COMPLETO (pendiente aplicar `0005` + verificar)
+## Fase 13 — Ocultar entradas del panel (feed + logros) — INFRA LISTA (`0005` aplicado; falta verificar con clientes reales)
 
 El entrenador puede **ocultar** entradas de "Actividad reciente" y "Logros de la semana"
 **deslizando la fila**; se guarda por entrenador y sobrevive recargas, con "Mostrar ocultos (N)"
@@ -680,7 +698,8 @@ para restaurarlas.
    `SwipeToDismiss` (→ `useDismissDashboardItem`); enlace "Mostrar ocultos (N)"
    (→ `useRestoreDashboardItems`) al pie de "Actividad reciente".
 
-**Para activarlo:** `npx supabase db push` (aplica `0005`). Contra el mock ya funciona.
+**Estado (2026-09-07):** `0005` aplicado. Pendiente: verificar en la app cuando haya clientes
+reales con actividad que ocultar.
 
 **Fuera de alcance:** notificaciones push (`expo-notifications`); bandeja de notificaciones con
 leído/no-leído; ocultar `stats` / `upcomingSessions`.
@@ -716,7 +735,7 @@ La vista de solo lectura (`RoutineBlockList` / `AssignedRoutineView`, cliente) *
 
 ---
 
-## Fase 15 — Notificaciones (bandeja in-app + push) — CÓDIGO COMPLETO (pendiente aplicar `0006`, desplegar `send-push` y verificar el banner OS con un build nativo)
+## Fase 15 — Notificaciones (bandeja in-app + push) — INFRA LISTA (`0006` aplicado, `send-push` desplegada, `app_config` OK; falta FCM + build nativo para el banner OS)
 
 Bandeja de notificaciones para ambos roles + entrega push (Expo Push API). El **push real
 no se puede probar en web ni Expo Go** (requiere un *development build* de EAS); la **bandeja
@@ -764,19 +783,19 @@ in-app + Realtime** sí funciona en web.
 - "Que la actividad del cliente le llegue al coach": el trigger de `workout_sessions` genera la
   notificación; el panel refresca por Realtime + pull-to-refresh.
 
-**Pasos para activar el push:**
-```
-npx supabase db push                                   # aplica 0006
-npx supabase functions deploy send-push --no-verify-jwt
-npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>
-# En el SQL Editor:
-insert into public.app_config(key,value) values
-  ('edge_url','https://<ref>.supabase.co/functions/v1'),
-  ('push_secret','<el mismo aleatorio>')
-on conflict (key) do update set value = excluded.value;
-```
-El banner del sistema operativo requiere además `eas.json` + `expo-dev-client` + `eas build`
-(pendiente — pipeline de build, Fase 15/Futuro).
+**Estado de activación (2026-09-07):** `0006` aplicado. `send-push` desplegada y ACTIVE.
+`PUSH_HOOK_SECRET` (secret) configurado. Fila `app_config` con `edge_url` + `push_secret`
+presente. **Pendiente:**
+- Verificar que `app_config.push_secret` **coincide** con el `PUSH_HOOK_SECRET` de la función
+  (ambos llegan como digest, no se pudieron comparar; si el push no se dispara, es lo primero a
+  mirar). Corregir con:
+  ```sql
+  update public.app_config set value = '<mismo valor que PUSH_HOOK_SECRET>' where key = 'push_secret';
+  ```
+- La **bandeja in-app + Realtime** ya se puede probar en web (no necesita nada más).
+- El **banner del sistema operativo** necesita FCM + `eas build` (ver "Build nativo"):
+  `google-services.json` → `app.json`, subir la clave FCM V1 con `npx eas credentials`,
+  `npm run build:dev`, instalar el APK en un Android.
 
 **Fuera de alcance:** `eas.json` / dev build; preferencias por tipo de notificación; recordatorios
 de sesión programados (`pg_cron`); badge de icono de app; agrupación / centro de notificaciones
@@ -1111,20 +1130,26 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
 
 ## Roadmap de fases
 
-> **Activación pendiente (bloqueante para la app contra Supabase real):**
-> `npx supabase db push` (aplica `0003`+`0004`+`0005`+`0006`) · re-pegar `supabase/seed.sql` en
-> el SQL Editor · re-enlazar el usuario cliente (`update public.clients set client_user_id =
-> (select id from auth.users where email='cliente@navyteam.com') where id='cli_luis';`) ·
-> `npx supabase functions deploy invite-client delete-client` ·
-> `npx supabase functions deploy send-push --no-verify-jwt` ·
-> `npx supabase secrets set INVITE_REDIRECT_URL=https://<host-web>/set-password` ·
-> `npx supabase secrets set PUSH_HOOK_SECRET=<aleatorio>` + fila `app_config` (ver Fase 15).
+> **Activación en Supabase — HECHA** (verificado 2026-09-07, ver "Estado del proyecto Supabase
+> real" arriba): migraciones `0001`–`0006` aplicadas, las 3 Edge Functions desplegadas,
+> `PUSH_HOOK_SECRET` + fila `app_config` presentes, catálogos sembrados, 0 clientes (correcto).
 >
-> **Antes de producción:** `supabase/cleanup_before_prod.sql` (borra los 5 clientes demo + su
-> actividad + el usuario `cliente@navyteam.com`; **conserva** el catálogo y la cuenta
-> `entrenador@navyteam.com`). Cambiar email/contraseña/nombre de esa cuenta desde el Dashboard →
-> Authentication → Users (así se mantiene `auth.identities` consistente). La contraseña
-> `navyteam123` está en este archivo → **hay que cambiarla**.
+> **Lo que queda pendiente:**
+> 1. **`INVITE_REDIRECT_URL`** (secret) — falta. `npx supabase secrets set
+>    INVITE_REDIRECT_URL=https://<host-web>/set-password` (el `<host-web>` es el deploy de EAS
+>    Hosting — sale de `npx eas deploy` / el dashboard de hosting).
+> 2. **Allowlist de redirect**: Dashboard → Auth → URL Configuration → `https://<host>/set-password`
+>    + `https://<host>/**`.
+> 3. **Email template** "Invite user" en español (opcional).
+> 4. **Verificación end-to-end** en la app: login del coach, crear un cliente real → llega el
+>    email → `/set-password` → el cliente entra y ve su rutina/plan. Probar el push necesita el
+>    build nativo (ver "Build nativo").
+>
+> **Antes de producción:** cambiar email/contraseña/nombre de `entrenador@navyteam.com` desde
+> Dashboard → Authentication → Users (así `auth.identities` queda consistente). La contraseña
+> `navyteam123` está en este archivo → **hay que cambiarla**. `supabase/cleanup_before_prod.sql`
+> quedó para el escenario con clientes demo — hoy no hay ninguno, así que solo aplica la parte
+> de la cuenta del coach.
 
 1. ✅ **Fase 1** — Login + Dashboard con mocks. Desplegado en EAS Hosting (web).
 2. ✅ **Fase 2** — Resto de pantallas con mocks + navegación real (Tabs + Drawer).
@@ -1136,22 +1161,25 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
 8. ✅ **Fase 8** — **Vista de cliente** con mocks (misma app, rutas por rol, grupo `app/(client)/`): el cliente ve su rutina y su plan asignados y registra sus propias series (reps/pesos) → llegan al panel del entrenador.
 9. ✅ **Fase 9** — Backend real de autenticación **multi-rol** con Supabase (`AuthGateway` +
    `supabaseAuthGateway` + persistencia de sesión + refresh), verificado para ambos roles.
-10. ✅ **Fase 10** — Conectar todos los Gateways a Supabase (esquema BD + RLS por rol en `0001`+`0002`, 7 Gateways `*.supabase.ts`, dashboard con composición real parcial). Migración aplicada al proyecto real; RLS de coach y cliente verificada por API. Pendiente: verificación end-to-end en la app.
+10. ✅ **Fase 10** — Conectar todos los Gateways a Supabase (esquema BD + RLS por rol en `0001`+`0002`, 7 Gateways `*.supabase.ts`, dashboard con composición real parcial). Migraciones aplicadas al proyecto real; RLS de coach y cliente verificada por API. Pendiente: verificación end-to-end en la app.
 11. 🚧 **Fase 11** — Alta de clientes por **invitación de email** (Edge Functions `invite-client` /
     `delete-client`) + **política de tratamiento de datos** con aceptación obligatoria y reporte
-    auditable + **borrado en cascada** real (datos + cuenta de Auth). Código completo; pendiente
-    aplicar `0003`, desplegar las funciones y verificar el flujo del enlace.
+    auditable + **borrado en cascada** real (datos + cuenta de Auth). Código completo; `0003`
+    aplicado, funciones desplegadas. **Falta `INVITE_REDIRECT_URL` + allowlist de redirect + probar
+    el flujo del enlace** (necesita el deploy web con URL conocida).
 12. 🚧 **Fase 12** — **Comidas y alimentos en los planes** (catálogo `foods`, editor por comidas
     con `FoodPickerModal`, cálculo de kcal/macros en `nutritionMath.ts`, migración `0004`).
-    Código completo; pendiente aplicar `0004` y verificar.
+    Código completo; `0004` aplicado + foods sembrados. Pendiente: verificación end-to-end en la app.
 13. 🚧 **Fase 13** — **Ocultar entradas del panel** (feed + logros) deslizando la fila;
-    `dashboard_dismissals` + `SwipeToDismiss`. Código completo; pendiente aplicar `0005`.
+    `dashboard_dismissals` + `SwipeToDismiss`. Código completo; `0005` aplicado. Pendiente:
+    verificación end-to-end (necesita clientes reales con actividad).
 14. 🚧 **Fase 15** — **Notificaciones** (bandeja in-app + push): tablas `notifications` /
     `push_tokens`, triggers de dominio → `_notify()`, Edge Function `send-push` (Expo Push API),
-    `NotificationsBridge` + campana + bandeja. Migración `0006` **aplicada y verificada**;
-    `send-push` desplegada; `eas.json` + `expo-dev-client` listos. Pendiente: `PUSH_HOOK_SECRET` +
-    `app_config` + FCM + `eas build` + probar el banner OS en un Android. Incluye el rework de
-    "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
+    `NotificationsBridge` + campana + bandeja. `0006` aplicado; `send-push` desplegada;
+    `PUSH_HOOK_SECRET` + `app_config` configurados; `eas.json` + `expo-dev-client` listos.
+    Pendiente: verificar `push_secret == PUSH_HOOK_SECRET` + FCM + `eas build` + probar el banner
+    OS en un Android. La **bandeja in-app + Realtime** ya se puede probar en web. Incluye el
+    rework de "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
 15. **Fase 16** — **Endurecimiento de rendimiento y abuso**: (a) cache en React Query
     (`QueryClient` con `staleTime`/`gcTime`, `refetchOnWindowFocus: false`, Realtime como
     invalidador); (b) rate limiting (Auth Rate Limits + Captcha en el Dashboard, límite propio en
