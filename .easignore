@@ -1,0 +1,55 @@
+# EAS Build usa ESTE archivo en vez de .gitignore para armar el tarball del
+# proyecto. Tiene que ser un superset de .gitignore + lo que no debe ir al build.
+
+# --- Motivo original de este archivo ---
+# Tooling de Claude Code / skills. `.claude/skills/frontend-design` es un symlink
+# (→ .agents/skills/frontend-design) que EAS Build no puede recrear al empaquetar
+# en Windows: "EPERM: operation not permitted, symlink".
+.agents/
+.claude/
+skills-lock.json
+
+# --- dependencias ---
+node_modules/
+
+# --- Expo / build ---
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# --- native / firmas ---
+.kotlin/
+/ios
+/android
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# --- env / secretos ---
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local
+secrets/
+*.secret.*
+
+# --- codebase-memory-mcp (índice del grafo) ---
+.codebase-memory/
+
+# --- misc ---
+.DS_Store
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# --- Supabase local ---
+supabase/.branches/
+supabase/.temp/
