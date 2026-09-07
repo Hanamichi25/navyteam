@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useNutritionGateway } from '@/gateways';
+import { STALE_TIME } from '@/lib/queryClient';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { NutritionPlan, NutritionPlanDetail, NutritionPlanInput } from '@/types/nutrition';
 
@@ -11,7 +12,7 @@ const nutritionPlanKey = (id: string) => ['nutritionPlans', id] as const;
 export function useNutritionPlans(): AsyncState<NutritionPlan[]> {
   const gateway = useNutritionGateway();
   return toAsyncState(
-    useQuery({ queryKey: nutritionPlansKey, queryFn: gateway.list }),
+    useQuery({ queryKey: nutritionPlansKey, queryFn: gateway.list, staleTime: STALE_TIME.catalog }),
     'No se pudieron cargar los planes de alimentación',
   );
 }
@@ -24,6 +25,7 @@ export function useNutritionPlan(id: string, enabled = true): AsyncState<Nutriti
       queryKey: nutritionPlanKey(id),
       queryFn: () => gateway.get(id),
       enabled: enabled && id !== '',
+      staleTime: STALE_TIME.catalog,
     }),
     'No se pudo cargar el plan de alimentación',
   );

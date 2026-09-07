@@ -22,3 +22,24 @@ export async function getCaller(req: Request, admin: SupabaseClient): Promise<Ca
   if (error || !data.user) return null;
   return { uid: data.user.id, role: (data.user.user_metadata?.role as string | undefined) };
 }
+
+/**
+ * `true` si la llamada identificada por `key` está dentro del límite
+ * (`max` por ventana de `windowSeconds`). Si la comprobación falla por un
+ * problema de infra, deja pasar (fail-open) — no queremos que un fallo del
+ * rate limiter tumbe la función legítima.
+ */
+export async function withinRateLimit(
+  admin: SupabaseClient,
+  key: string,
+  max: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  const { data, error } = await admin.rpc('check_rate_limit', {
+    p_key: key,
+    p_max: max,
+    p_window_seconds: windowSeconds,
+  });
+  if (error) return true;
+  return data === true;
+}

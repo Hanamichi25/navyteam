@@ -7,7 +7,7 @@ import {
   Manrope_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/manrope';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -19,8 +19,9 @@ import { configureAuthGateway, SessionGuard, useAuthStore } from '@/features/aut
 import { createSupabaseAuthGateway } from '@/features/auth/supabase/authGateway.supabase';
 import { NotificationsBridge } from '@/features/notifications';
 import { GatewaysProvider } from '@/gateways';
+import { createQueryClient } from '@/lib/queryClient';
 
-const queryClient = new QueryClient();
+const queryClient = createQueryClient();
 
 // Toda la data va contra Supabase; `.env` es obligatorio (`src/lib/supabase.ts` lanza si falta).
 configureAuthGateway(createSupabaseAuthGateway());

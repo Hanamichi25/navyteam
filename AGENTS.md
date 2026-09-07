@@ -815,84 +815,66 @@ con estados avanzados.
 
 ---
 
-## Fase 16 — Endurecimiento de rendimiento y abuso — PENDIENTE (no empezada)
+## Fase 16 — Endurecimiento de rendimiento y abuso — CÓDIGO COMPLETO (pendiente aplicar `0007` + config del Dashboard)
 
-Tres frentes pedidos por el usuario (2026-09-06) para que el servicio aguante uso real y no se
-lo pueda tumbar con tráfico. Ninguno cambia las interfaces `Gateway` ni la UI — son config de
-React Query, una capa en las Edge Functions y una migración de índices.
+Tres frentes para que el servicio aguante uso real y no se lo pueda tumbar con tráfico. Ninguno
+cambia las interfaces `Gateway`.
 
-### 16.1 — Cache en los servicios (menos consultas a la BD)
+### 16.1 — Cache en React Query — HECHO
 
-Hoy `app/_layout.tsx` crea `new QueryClient()` **sin opciones** → `staleTime: 0`: cada montaje
-de pantalla o `refetchOnWindowFocus` dispara una consulta nueva. Con Supabase real eso es una
-request de red + una evaluación de RLS por cada vuelta.
+- **`src/lib/queryClient.ts`** (nuevo) — `createQueryClient()` con `defaultOptions.queries`:
+  `staleTime: 30s`, `gcTime: 5min`, **`refetchOnWindowFocus: false`**, `retry: 1`.
+  `app/_layout.tsx` lo usa en vez de `new QueryClient()`.
+- Mapa **`STALE_TIME`** = `{ catalog: 5min, default: 30s, live: 0 }`.
+  - Catálogos (`useExercises`, `useFoods`, `useRoutines` + `useRoutine`, `useNutritionPlans` +
+    `useNutritionPlan`) → `staleTime: STALE_TIME.catalog`.
+  - `useDashboardData` → `STALE_TIME.live`.
+  - `useNotifications` / `useUnreadNotificationCount` → `STALE_TIME.live` + `refetchOnWindowFocus:
+    true` explícito (contra el default global; la bandeja sí quiere refrescar al volver el foco).
+- Las mutaciones ya invalidaban su `queryKey` (patrón Fase 3), así que subir `staleTime` no
+  vuelve la UI obsoleta tras un cambio propio.
 
-- **`QueryClient` con defaults sensatos** (`defaultOptions.queries`): `staleTime` de 30–60 s
-  para todo (los datos de este dominio no cambian cada segundo), `gcTime` ~5 min,
-  `refetchOnWindowFocus: false` en web (el pull-to-refresh y las invalidaciones tras mutación
-  ya cubren la frescura), `retry: 1`.
-- **`staleTime` por tipo de query** donde tenga sentido: catálogos (`exercises`, `foods`,
-  `routines`, `nutrition-plans`) toleran minutos; el dashboard y las notificaciones, menos.
-  Centralizarlo en un mapa por `queryKey[0]` o sobreescribir solo los hooks que lo necesiten.
-- **Revisar los `invalidateQueries` existentes**: al subir `staleTime`, cualquier mutación que
-  hoy dependa del refetch automático post-focus tiene que invalidar explícitamente su
-  `queryKey` (la mayoría ya lo hace — patrón de la Fase 3).
-- **Realtime como invalidador puntual** (ya hay precedente en `NotificationsBridge`): en vez de
-  bajar `staleTime`, suscribirse a los `postgres_changes` de una tabla e invalidar su
-  `queryKey` al llegar un cambio. Frescura sin polling. Candidatos: `messages`,
-  `workout_sessions` en el panel del coach.
-- **Persistir la cache entre recargas (web)** — opcional, más adelante:
-  `@tanstack/query-async-storage-persister` + `persistQueryClient`. Ojo: la sesión vive en
-  `sessionStorage` (Fase 9); persistir datos en `localStorage` mezclaría vidas distintas.
+**Pendiente (opcional, no bloqueante):** Realtime como invalidador para `messages` y
+`workout_sessions` en el panel del coach (mismo patrón que `NotificationsBridge`); persistir la
+cache entre recargas (`persistQueryClient` — ojo con mezclar vidas: la sesión vive en
+`sessionStorage`). **Qué NO hacer:** cache del lado del servidor (Redis, vistas materializadas)
+— prematuro.
 
-**Qué NO hacer:** cache del lado del servidor (Redis, vistas materializadas) — es prematuro; el
-cuello hoy es el refetch agresivo del cliente, no la BD.
+### 16.2 — Rate limiting
 
-### 16.2 — Rate limiting (que no nos tumben el servicio)
+**En código (HECHO):**
+- **Migración `0007`** añade `public.rate_limit (key, window_start, count)` + la función
+  `public.check_rate_limit(p_key, p_max, p_window_seconds)` (SECURITY DEFINER, ventana
+  deslizante atómica vía `insert ... on conflict`, revocada de PostgREST).
+- **`_shared/supabase.ts`** gana `withinRateLimit(admin, key, max, windowSeconds)` (fail-open si
+  la RPC falla). `invite-client` → 10 / 10 min por coach; `delete-client` → 20 / 10 min por
+  coach. Exceso → 429.
+- **`LoginForm`** → back-off local: tras 5 fallos, freno creciente (15 s por intento extra,
+  tope 120 s) con botón deshabilitado y contador. UX defensiva; la autoridad es el rate
+  limiting de Supabase Auth sobre `/token`.
 
-- **PostgREST (los `*Gateway.supabase.ts`)**: el rate limiting real vive en el **proyecto de
-  Supabase**, no en el código. Dashboard:
-  - Auth → Rate Limits: bajar los de `/token`, `/signup`, `/recover`, `/otp`. El de `/token`
-    (login) es el más importante — hoy `LoginForm` no tiene back-off ni captcha.
-  - Auth → Settings: activar **Captcha** (hCaptcha/Turnstile) para `signup` / `signin`;
-    `LoginForm` renderiza el widget y pasa el token.
-  - Considerar poner Supabase detrás de **Cloudflare** (proxy) para rate limiting de borde por
-    IP y protección L7 — la defensa más efectiva contra un flood y no toca código.
-- **Edge Functions** (`invite-client`, `delete-client`, `send-push`): no tienen throttle propio.
-  - `invite-client` / `delete-client` ya validan que el llamador sea el coach dueño, pero un
-    coach comprometido podría invitar en bucle. Añadir un límite simple: tabla
-    `rate_limit (key, window_start, count)` + check atómico al entrar (`insert ... on conflict`),
-    `key = 'invite:' || caller_uid`, ventana de 1 min. Alternativa gestionada: **Upstash Redis**
-    (`@upstash/ratelimit`, SDK para Deno) — suma dependencia externa, confirmar antes.
-  - `send-push` ya está protegida por `x-push-secret`; el riesgo ahí es interno (trigger en
-    bucle), no público.
-- **App**: `LoginForm` con back-off local tras N intentos fallidos (UX, no seguridad — el
-  servidor es la autoridad) + botón deshabilitado mientras hay request en vuelo (ya lo hace).
+**Config del Dashboard (PENDIENTE, no es código):**
+- Auth → Rate Limits: bajar `/token`, `/signup`, `/recover`, `/otp`.
+- Auth → Settings: activar **Captcha** (hCaptcha/Turnstile) para `signin`/`signup` — requiere
+  además renderizar el widget en `LoginForm` y pasar el token (no hecho).
+- Evaluar **Cloudflare** delante de Supabase (rate limiting de borde por IP, protección L7).
+- `send-push` ya está protegida por `x-push-secret`; el riesgo ahí es interno, no público.
 
-### 16.3 — Validar que las tablas estén indexadas
+### 16.3 — Índices — HECHO (en `0007`)
 
-**Estado actual** (revisado 2026-09-06): el esquema base (`0001`) y las migraciones nuevas ya
-traen índice en **casi todas** las FK y en las columnas de filtro frecuentes
-(`*_coach_id_idx`, `*_client_id_idx`, `workout_sessions (client_id, date desc)`,
-`messages (client_id, sent_at)`, `notifications (user_id, created_at desc)`, etc.).
+El esquema (`0001`/`0004`/`0006`) ya indexa casi todas las FK y columnas de filtro. Auditados
+todos los FK de dominio; los 3 que faltaban están en `0007`, todos FK `on delete set null`
+hacia tablas que crecen (sin índice → seq scan en cada borrado del lado "uno"):
+- `clients.nutrition_plan_id` (al borrar un plan)
+- `workout_exercise_logs.exercise_id` (al borrar un ejercicio)
+- `workout_sessions.routine_id` (al borrar una rutina)
 
-**Huecos detectados** (candidatos para `supabase/migrations/0007_phase16_indexes.sql`):
-- `workout_exercise_logs.exercise_id` — FK **sin índice**. Lo usa el progreso por ejercicio
-  (`clients/[id]/progress/[exerciseId]`) y el gateway de workouts al agregar por ejercicio.
-- `clients.nutrition_plan_id` — FK sin índice; lo usa el embed del plan asignado (lista +
-  perfil de cliente).
-- `workout_sessions.routine_id` — FK sin índice (menos crítico).
-- `user_consents` — solo PK; revisar el `EXPLAIN` de la RPC `consent_report()`.
-- **Índices que sostienen la RLS**: los helpers `is_coach_of` / `is_client_of` (`0002`) hacen
-  subqueries sobre `clients` — cubiertas por `clients_coach_id_idx` / `clients_client_user_id_idx`.
-  Verificar con `EXPLAIN (ANALYZE)` una query real de cada rol que la RLS no fuerce un seq scan.
-- **Barrido sistemático**: Supabase Dashboard → Advisors → "Performance" marca índices
-  faltantes automáticamente — usarlo primero. Luego correr las consultas más pesadas
-  (dashboard, lista de clientes con embeds, historial de sesiones) con un dataset de ~50
-  clientes × ~100 sesiones y mirar el plan.
+**Pendiente (verificación, no bloqueante):** correr el **Advisor de Supabase** (Dashboard →
+Advisors → Performance) con datos reales, y `EXPLAIN (ANALYZE)` sobre las queries pesadas
+(dashboard, lista de clientes con embeds, `consent_report()`) para confirmar que la RLS no
+fuerza seq scans.
 
-**Entregable:** `0007_phase16_indexes.sql` con `create index concurrently` **solo** de lo que el
-análisis confirme — un índice de más también cuesta en escritura.
+**Para aplicar `0007`:** `npx supabase db push`.
 
 ---
 
@@ -1059,9 +1041,11 @@ interfaz, **nunca** con `@supabase/supabase-js` directamente.
 - Operaciones que necesitan `service_role` (crear/borrar usuarios de Auth) van en Edge
   Functions (`supabase/functions/`), nunca en la app.
 - Data de demo: `supabase/seed.sql` (fuente única). Migraciones: `supabase/migrations/`.
-- **Cache / rate limiting / índices:** ver **Fase 16** (pendiente). Hoy `QueryClient` no tiene
-  `staleTime` → cada pantalla refetchea; la Fase 16 lo ajusta, revisa índices faltantes y añade
-  rate limiting en Auth + Edge Functions.
+- **Cache:** `src/lib/queryClient.ts` — `staleTime` por tipo (`STALE_TIME.catalog`/`default`/
+  `live`), `refetchOnWindowFocus: false`. Los hooks de catálogo pasan `staleTime: STALE_TIME.catalog`.
+- **Rate limiting:** `_shared/supabase.ts#withinRateLimit` + `check_rate_limit()` (`0007`) en
+  `invite-client`/`delete-client`. Config del Dashboard (Auth Rate Limits, Captcha) pendiente.
+- **Índices:** `0007_phase16_indexes.sql` (pendiente aplicar). Ver **Fase 16**.
 
 ---
 
@@ -1142,16 +1126,19 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
 
 ## Roadmap de fases
 
-> **Activación en Supabase — HECHA** (verificado 2026-09-07, ver "Estado del proyecto Supabase
-> real" arriba): migraciones `0001`–`0006` aplicadas, las 3 Edge Functions desplegadas,
+> **Activación en Supabase — `0001`–`0006` HECHA** (verificado 2026-09-07, ver "Estado del
+> proyecto Supabase real" arriba): migraciones aplicadas, las 3 Edge Functions desplegadas,
 > `PUSH_HOOK_SECRET` + fila `app_config` presentes, catálogos sembrados, 0 clientes (correcto).
 >
 > **Lo que queda pendiente:**
-> 1. **`INVITE_REDIRECT_URL`** — configurado a `https://navyteam--0thd31wyvj.expo.app/set-password`
+> 1. **`npx supabase db push`** para aplicar **`0007`** (índices + rate limiting de la Fase 16),
+>    y re-desplegar las funciones: `npx supabase functions deploy invite-client delete-client`
+>    (usan el nuevo `withinRateLimit`).
+> 2. **`INVITE_REDIRECT_URL`** — configurado a `https://navyteam--0thd31wyvj.expo.app/set-password`
 >    (deploy **preview**, URL con hash). Al hacer `npm run deploy -- --prod` hay que re-configurar
 >    el secret y la allowlist con la URL estable (`navyteam.expo.app` o dominio propio).
-> 2. **Email template** "Invite user" en español (opcional).
-> 3. **Verificación end-to-end** en la app: login del coach, crear un cliente real → llega el
+> 3. **Email template** "Invite user" en español (opcional).
+> 4. **Verificación end-to-end** en la app: login del coach, crear un cliente real → llega el
 >    email → `/set-password` → el cliente entra y ve su rutina/plan. Probar el push necesita el
 >    build nativo (ver "Build nativo").
 >
@@ -1190,13 +1177,13 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
     Pendiente: verificar `push_secret == PUSH_HOOK_SECRET` + FCM + `eas build` + probar el banner
     OS en un Android. La **bandeja in-app + Realtime** ya se puede probar en web. Incluye el
     rework de "Actividad reciente" (ventana de 30 días, filas pulsables, pull-to-refresh).
-15. **Fase 16** — **Endurecimiento de rendimiento y abuso**: (a) cache en React Query
-    (`QueryClient` con `staleTime`/`gcTime`, `refetchOnWindowFocus: false`, Realtime como
-    invalidador); (b) rate limiting (Auth Rate Limits + Captcha en el Dashboard, límite propio en
-    las Edge Functions, back-off en `LoginForm`, evaluar Cloudflare delante); (c) auditoría de
-    índices (`0007_phase16_indexes.sql` — huecos ya detectados:
-    `workout_exercise_logs.exercise_id`, `clients.nutrition_plan_id`, `workout_sessions.routine_id`;
-    + barrido con el Advisor de Supabase). Ver la sección "Fase 16". PENDIENTE.
+15. 🚧 **Fase 16** — **Endurecimiento de rendimiento y abuso**. Código completo: (a) cache en
+    React Query (`src/lib/queryClient.ts` — `staleTime`/`gcTime`, `refetchOnWindowFocus: false`,
+    mapa `STALE_TIME` por tipo); (b) rate limiting en `invite-client`/`delete-client` (tabla
+    `rate_limit` + `check_rate_limit()` en `0007`) + back-off en `LoginForm`; (c) 3 índices FK
+    faltantes en `0007`. Pendiente: `npx supabase db push` (aplica `0007`) + config del Dashboard
+    (Auth Rate Limits, Captcha, evaluar Cloudflare) + barrido con el Advisor de Supabase. Ver la
+    sección "Fase 16".
 16. **Fase 14** — Facturación (el seguimiento de suscripción/pagos por cliente ya está hecho con
     mocks en el pulido pre-Fase 9; falta la pasarela de pago real y la conexión a datos).
 17. **Asistente de IA para rutinas y planes** (idea de producto — *plus* de pago) — el entrenador

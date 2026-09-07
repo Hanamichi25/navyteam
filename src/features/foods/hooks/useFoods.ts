@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useFoodsGateway } from '@/gateways';
+import { STALE_TIME } from '@/lib/queryClient';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { Food, FoodInput } from '@/types/food';
 
@@ -10,7 +11,7 @@ const foodsKey = ['foods'] as const;
 export function useFoods(): AsyncState<Food[]> {
   const gateway = useFoodsGateway();
   return toAsyncState(
-    useQuery({ queryKey: foodsKey, queryFn: gateway.list }),
+    useQuery({ queryKey: foodsKey, queryFn: gateway.list, staleTime: STALE_TIME.catalog }),
     'No se pudieron cargar los alimentos',
   );
 }

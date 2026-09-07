@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useRoutinesGateway } from '@/gateways';
+import { STALE_TIME } from '@/lib/queryClient';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { Routine, RoutineDetail, RoutineInput } from '@/types/routine';
 
@@ -11,7 +12,7 @@ const routineKey = (id: string) => ['routines', id] as const;
 export function useRoutines(): AsyncState<Routine[]> {
   const gateway = useRoutinesGateway();
   return toAsyncState(
-    useQuery({ queryKey: routinesKey, queryFn: gateway.list }),
+    useQuery({ queryKey: routinesKey, queryFn: gateway.list, staleTime: STALE_TIME.catalog }),
     'No se pudieron cargar las rutinas',
   );
 }
@@ -24,6 +25,7 @@ export function useRoutine(id: string, enabled = true): AsyncState<RoutineDetail
       queryKey: routineKey(id),
       queryFn: () => gateway.get(id),
       enabled: enabled && id !== '',
+      staleTime: STALE_TIME.catalog,
     }),
     'No se pudo cargar la rutina',
   );

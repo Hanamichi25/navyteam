@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
-import { adminClient, getCaller } from '../_shared/supabase.ts';
+import { adminClient, getCaller, withinRateLimit } from '../_shared/supabase.ts';
 
 /**
  * Elimina un cliente y TODOS sus datos.
@@ -19,6 +19,14 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req, admin);
     if (!caller || caller.role !== 'coach') {
       return jsonResponse({ error: 'No autorizado.' }, 403);
+    }
+
+    // Máx. 20 borrados por coach cada 10 min (cada uno toca varias tablas + Auth).
+    if (!(await withinRateLimit(admin, `delete-client:${caller.uid}`, 20, 600))) {
+      return jsonResponse(
+        { error: 'Demasiadas operaciones seguidas. Espera unos minutos e inténtalo de nuevo.' },
+        429,
+      );
     }
 
     const { clientId } = await req.json().catch(() => ({}));

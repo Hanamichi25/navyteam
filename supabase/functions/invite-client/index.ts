@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
-import { adminClient, getCaller } from '../_shared/supabase.ts';
+import { adminClient, getCaller, withinRateLimit } from '../_shared/supabase.ts';
 
 /**
  * Invita por email a un cliente a que cree su cuenta y ponga contraseña.
@@ -20,6 +20,14 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req, admin);
     if (!caller || caller.role !== 'coach') {
       return jsonResponse({ error: 'No autorizado.' }, 403);
+    }
+
+    // Máx. 10 invitaciones por coach cada 10 min (cada una manda un email).
+    if (!(await withinRateLimit(admin, `invite:${caller.uid}`, 10, 600))) {
+      return jsonResponse(
+        { error: 'Demasiadas invitaciones seguidas. Espera unos minutos e inténtalo de nuevo.' },
+        429,
+      );
     }
 
     const { clientId } = await req.json().catch(() => ({}));

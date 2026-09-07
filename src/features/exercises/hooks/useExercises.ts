@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useExercisesGateway } from '@/gateways';
+import { STALE_TIME } from '@/lib/queryClient';
 import { toAsyncState, type AsyncState } from '@/lib/queryState';
 import type { Exercise, ExerciseInput } from '@/types/exercise';
 
@@ -10,7 +11,7 @@ const exercisesKey = ['exercises'] as const;
 export function useExercises(): AsyncState<Exercise[]> {
   const gateway = useExercisesGateway();
   return toAsyncState(
-    useQuery({ queryKey: exercisesKey, queryFn: gateway.list }),
+    useQuery({ queryKey: exercisesKey, queryFn: gateway.list, staleTime: STALE_TIME.catalog }),
     'No se pudieron cargar los ejercicios',
   );
 }
