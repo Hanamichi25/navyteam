@@ -45,15 +45,30 @@ demo comentados/históricos, pero **no se ejecutan** — si aparece uno, es erro
 - **Catálogos sembrados** (ejercicios 11, rutinas 6, planes 4, foods 24). **0 clientes** (correcto).
 - **Usuarios de Auth:** solo `entrenador@navyteam.com` (`role: coach`). No hay usuario cliente de
   prueba y no debe crearse uno — los clientes entran por el flujo de invitación.
+- **`INVITE_REDIRECT_URL`** configurado (2026-09-07) →
+  `https://navyteam--0thd31wyvj.expo.app/set-password` + esa URL y `/**` en la allowlist de
+  redirects del Dashboard.
+  ⚠️ **Ese deploy es PREVIEW, no productivo** — la URL con hash (`--0thd31wyvj`) cambia con cada
+  `npm run deploy`. Para producción hay que hacer `npm run deploy -- --prod` (alias estable
+  `navyteam.expo.app` o dominio propio) y **re-configurar `INVITE_REDIRECT_URL` + la allowlist**
+  con esa URL fija.
 
-**Lo que falta para el flujo de invitación (Fase 11):**
-1. **`INVITE_REDIRECT_URL`** (secret) — no está configurado. Debe ser `https://<host-web>/set-password`
-   (el deploy de EAS Hosting). `npx supabase secrets set INVITE_REDIRECT_URL=https://<host>/set-password`.
-2. **Allowlist de redirect**: Dashboard → Auth → URL Configuration → añadir
-   `https://<host>/set-password` y `https://<host>/**`.
-3. **Email template** "Invite user" → copy en español (opcional).
+**Lo que falta para cerrar la Fase 11:**
+1. **Email template** "Invite user" → copy en español (Dashboard → Auth → Email Templates, opcional).
+2. Rellenar `src/features/auth/responsable.ts` + revisión jurídica de `policy.ts`.
+3. **Verificar el flujo end-to-end**: login coach → crear cliente con email real → llega el
+   correo → `/set-password` → el cliente entra y ve su rutina/plan.
 4. Verificar que `PUSH_HOOK_SECRET` (secret de la función) == `app_config.push_secret` (no se pudo
    comparar, ambos llegan como digest) — solo relevante al probar el push real.
+
+### Deploy web para producción
+
+EAS Hosting sirve la app como sitio web estático. `npm run deploy` → **preview** (URL con hash,
+cambia cada vez); `npm run deploy -- --prod` → **producción** (alias estable `navyteam.expo.app`,
++ dominio propio opcional desde Dashboard → hosting → Custom domain, SSL automático). Al pasar a
+`--prod` hay que actualizar `INVITE_REDIRECT_URL` y la allowlist de Supabase con la URL estable.
+**El push del SO no funciona en web** (`expo-notifications` no soporta web push) — solo la
+bandeja in-app + Realtime; el banner OS necesita el build nativo.
 
 El histórico por fases de abajo conserva su redacción original ("con mocks", "AsyncStorage",
 etc.) como registro de cómo se construyó cada cosa; la implementación viva es la de Supabase.
@@ -598,14 +613,11 @@ eliminar un cliente se borre **toda** su data y su cuenta de Auth.
 6. `profile.tsx` del coach: `Alert.alert` → `confirm()` (bug de web) + fila a la política.
 
 **Estado de activación (2026-09-07):** `0003` aplicado. `invite-client` + `delete-client`
-desplegadas y ACTIVE. **Falta:**
-```
-npx supabase secrets set INVITE_REDIRECT_URL=https://<web-host>/set-password
-```
-+ Dashboard → Auth → URL Configuration: añadir `https://<web-host>/set-password` y
-`https://<web-host>/**` a la allowlist. Auth → Email Templates → "Invite user": copy en español.
-Rellenar `src/features/auth/responsable.ts` y hacer revisar `policy.ts` por un abogado.
-El `<web-host>` sale del deploy de EAS Hosting (`npx eas deploy` / dashboard de hosting).
+desplegadas y ACTIVE. **`INVITE_REDIRECT_URL` configurado** →
+`https://navyteam--0thd31wyvj.expo.app/set-password` (deploy **preview** — al pasar a `--prod`
+hay que re-configurarlo con la URL estable) + esa URL y `/**` en la allowlist del Dashboard.
+**Falta:** Email Template "Invite user" en español; rellenar `src/features/auth/responsable.ts`
++ revisión jurídica de `policy.ts`.
 
 **Pendiente de verificar:** flujo completo del enlace de invitación (`set-password` usa
 `setSession`/`exchangeCodeForSession` según el formato del enlace — puede necesitar ajuste
@@ -1135,13 +1147,11 @@ iOS queda fuera por ahora (necesita cuenta Apple Developer, 99 USD/año).
 > `PUSH_HOOK_SECRET` + fila `app_config` presentes, catálogos sembrados, 0 clientes (correcto).
 >
 > **Lo que queda pendiente:**
-> 1. **`INVITE_REDIRECT_URL`** (secret) — falta. `npx supabase secrets set
->    INVITE_REDIRECT_URL=https://<host-web>/set-password` (el `<host-web>` es el deploy de EAS
->    Hosting — sale de `npx eas deploy` / el dashboard de hosting).
-> 2. **Allowlist de redirect**: Dashboard → Auth → URL Configuration → `https://<host>/set-password`
->    + `https://<host>/**`.
-> 3. **Email template** "Invite user" en español (opcional).
-> 4. **Verificación end-to-end** en la app: login del coach, crear un cliente real → llega el
+> 1. **`INVITE_REDIRECT_URL`** — configurado a `https://navyteam--0thd31wyvj.expo.app/set-password`
+>    (deploy **preview**, URL con hash). Al hacer `npm run deploy -- --prod` hay que re-configurar
+>    el secret y la allowlist con la URL estable (`navyteam.expo.app` o dominio propio).
+> 2. **Email template** "Invite user" en español (opcional).
+> 3. **Verificación end-to-end** en la app: login del coach, crear un cliente real → llega el
 >    email → `/set-password` → el cliente entra y ve su rutina/plan. Probar el push necesita el
 >    build nativo (ver "Build nativo").
 >
